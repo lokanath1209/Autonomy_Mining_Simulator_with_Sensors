@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AUSSIM — AUtonomy Site SIMulator</title>
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+  <!-- Landing overlay -->
+  <div id="landing">
+    <div class="landing-inner">
+      <div class="landing-badge">PERCEPTION &nbsp;·&nbsp; NAVIGATION &nbsp;·&nbsp; SIMULATION</div>
+      <h1>AUS<span>SIM</span></h1>
+      <div class="landing-fullname">AUtonomy Site SIMulator</div>
+      <p class="landing-sub">
+        Autonomous CAT&nbsp;797F haul truck on a Boddington-style open-pit mine — uneven terrain with
+        benched pit and rolling hills — live sensor suite (Camera, LiDAR, Radar, IMU, GNSS)
+        and randomly placed Caterpillar machines (MTTT, SCOM, D11, 6060&nbsp;FS, 24&nbsp;Grader …).
+      </p>
+      <div class="landing-chips">
+        <span>📷 Camera + Detections</span>
+        <span>🌀 32-ch LiDAR</span>
+        <span>📡 77 GHz Radar</span>
+        <span>🧭 IMU 6-DOF</span>
+        <span>🛰 GNSS / RTK</span>
+        <span>🛣 Pure-Pursuit Nav</span>
+      </div>
+      <button id="btn-start">▶ &nbsp;START</button>
+      <p class="landing-hint">Drag to orbit · scroll to zoom · left panel moves / rotates sensors live</p>
+      <p class="landing-copy">AUSSIM © 2026 Lokanath. All rights reserved.</p>
+    </div>
+  </div>
+
+  <!-- Main WebGL canvas (fills window, panels overlay it) -->
+  <canvas id="gl"></canvas>
+
+  <!-- App UI -->
+  <div id="app" class="hidden">
+    <!-- Left: controls -->
+    <div id="left-panel" class="ui-panel">
+      <div class="panel-title">⛭ MISSION CONTROL</div>
+      <div id="mission-controls" class="section">
+        <div class="btn-row">
+          <button id="btn-run" class="ctl-btn primary">❚❚ Pause</button>
+          <button id="btn-stop" class="ctl-btn danger">■ Stop</button>
+          <button id="btn-reset" class="ctl-btn">↺ Reset</button>
+        </div>
+        <div class="btn-row" id="cam-modes">
+          <button class="ctl-btn small active" data-mode="follow">Follow</button>
+          <button class="ctl-btn small" data-mode="free">Orbit</button>
+          <button class="ctl-btn small" data-mode="top">Top</button>
+          <button class="ctl-btn small" data-mode="onboard">Cab</button>
+        </div>
+        <div id="sim-sliders"></div>
+        <div class="btn-row">
+          <label class="chk"><input type="checkbox" id="chk-lidar-pts" checked> LiDAR cloud in 3D</label>
+        </div>
+        <div class="btn-row">
+          <label class="chk"><input type="checkbox" id="chk-gizmos" checked> Sensor gizmos / FOV</label>
+        </div>
+      </div>
+      <div class="panel-title">🔧 SENSOR RIG CONFIG</div>
+      <div id="sensor-config"></div>
+      <div class="btn-row" style="padding:8px 10px">
+        <button id="btn-sensors-reset" class="ctl-btn">Reset sensor rig</button>
+      </div>
+      <div class="footnote">Simulated stack: pure-pursuit planner · EKF-style pose · ray-cast LiDAR · FMCW radar model · pinhole camera + detector<br><br>AUSSIM © 2026 Lokanath</div>
+    </div>
+
+    <!-- Center HUD -->
+    <div id="hud">
+      <div class="hud-item"><span class="hud-label">STATE</span><span id="hud-state" class="hud-val">IDLE</span></div>
+      <div class="hud-item"><span class="hud-label">SPEED</span><span id="hud-speed" class="hud-val">0.0 km/h</span></div>
+      <div class="hud-item"><span class="hud-label">PAYLOAD</span><span id="hud-payload" class="hud-val">0%</span></div>
+      <div class="hud-item"><span class="hud-label">HEADING</span><span id="hud-heading" class="hud-val">000°</span></div>
+      <div class="hud-item"><span class="hud-label">PITCH</span><span id="hud-pitch" class="hud-val">0.0°</span></div>
+      <div class="hud-item"><span class="hud-label">ROLL</span><span id="hud-roll" class="hud-val">0.0°</span></div>
+      <div class="hud-item"><span class="hud-label">DIST&nbsp;TO&nbsp;WP</span><span id="hud-dist" class="hud-val">— m</span></div>
+      <div class="hud-item"><span class="hud-label">DETECTIONS</span><span id="hud-det" class="hud-val">0</span></div>
+      <div class="hud-item"><span class="hud-label">SIM&nbsp;TIME</span><span id="hud-time" class="hud-val">00:00</span></div>
+    </div>
+
+    <!-- Right: sensor output panels -->
+    <div id="right-panel">
+      <div class="sensor-panel" id="panel-camera">
+        <div class="sensor-head"><span class="dot cam"></span>CAMERA — front RGB <span class="sensor-meta" id="meta-camera">1280×720 · 30 fps</span></div>
+        <div class="sensor-body camera-body">
+          <div id="camera-view"></div>
+          <canvas id="camera-overlay"></canvas>
+        </div>
+      </div>
+      <div class="dual-row">
+        <div class="sensor-panel half" id="panel-lidar">
+          <div class="sensor-head"><span class="dot lidar"></span>LIDAR — BEV <span class="sensor-meta" id="meta-lidar">0 pts</span></div>
+          <div class="sensor-body"><canvas id="lidar-canvas"></canvas></div>
+        </div>
+        <div class="sensor-panel half" id="panel-radar">
+          <div class="sensor-head"><span class="dot radar"></span>RADAR — PPI <span class="sensor-meta" id="meta-radar">0 trk</span></div>
+          <div class="sensor-body"><canvas id="radar-canvas"></canvas></div>
+        </div>
+      </div>
+      <div class="sensor-panel" id="panel-imu">
+        <div class="sensor-head"><span class="dot imu"></span>IMU — 6-DOF <span class="sensor-meta" id="meta-imu">200 Hz</span></div>
+        <div class="sensor-body"><canvas id="imu-canvas"></canvas></div>
+      </div>
+      <div class="sensor-panel" id="panel-gps">
+        <div class="sensor-head"><span class="dot gps"></span>GNSS / RTK <span class="sensor-meta" id="meta-gps">FIX 3D</span></div>
+        <div class="sensor-body gps-body">
+          <canvas id="gps-canvas"></canvas>
+          <div id="gps-readout" class="mono"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

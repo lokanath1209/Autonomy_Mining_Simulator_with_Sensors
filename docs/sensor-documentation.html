@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sensor Suite Documentation — AUSSIM (AUtonomy Site SIMulator)</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#151b23; --border:#2a3441; --txt:#d7dee8; --dim:#8b98a8;
+    --accent:#ffcc00; --cam:#35d6e8; --lidar:#38e07b; --radar:#ff5d5d; --imu:#b18cff; --gps:#ffb04d;
+    --code:#101620;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font:15px/1.65 "Segoe UI",system-ui,sans-serif;padding:0 0 80px}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 28px}
+  header{background:linear-gradient(180deg,#181405,#0d1117);border-bottom:1px solid var(--border);padding:44px 0 30px;margin-bottom:36px}
+  h1{font-size:30px;color:#fff;letter-spacing:.5px}
+  h1 span{color:var(--accent)}
+  .sub{color:var(--dim);margin-top:8px;max-width:820px}
+  h2{font-size:22px;margin:52px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);color:#fff}
+  h3{font-size:16.5px;margin:26px 0 10px;color:#e8eef5}
+  p{margin:9px 0;color:#c3ccd7}
+  ul,ol{margin:8px 0 8px 24px;color:#c3ccd7}
+  li{margin:4px 0}
+  code{font-family:Consolas,"Cascadia Mono",monospace;font-size:13px;background:var(--code);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:#9fd8ff}
+  pre{background:var(--code);border:1px solid var(--border);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:12px 0;font-size:12.8px;line-height:1.55}
+  pre code{background:none;border:none;padding:0;color:#c9d7e6}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px}
+  th,td{border:1px solid var(--border);padding:7px 11px;text-align:left;vertical-align:top}
+  th{background:#1a212b;color:#e8eef5;font-weight:600}
+  td{color:#bcc7d3}
+  td b{color:#e8eef5}
+  .toc{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 24px;margin:20px 0}
+  .toc a{color:#9fd8ff;text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  .toc ol{margin-left:20px}
+  .badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:1.5px;border-radius:999px;padding:3px 12px;margin-right:8px;vertical-align:3px}
+  .b-cam{background:#0b3d46;color:var(--cam)} .b-lidar{background:#0d3d22;color:var(--lidar)}
+  .b-radar{background:#46161a;color:var(--radar)} .b-imu{background:#2b2050;color:var(--imu)}
+  .b-gps{background:#4a3208;color:var(--gps)}
+  .note{background:#122032;border-left:3px solid var(--cam);border-radius:0 8px 8px 0;padding:10px 16px;margin:14px 0;font-size:13.5px}
+  .warn{background:#2b1d10;border-left:3px solid var(--accent)}
+  /* ------- CSS flow diagrams ------- */
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:16px 0;overflow-x:auto;padding:6px 0}
+  .fbox{background:var(--panel);border:1.5px solid var(--border);border-radius:9px;padding:9px 13px;min-width:118px;max-width:200px;font-size:12.3px;line-height:1.45;display:flex;flex-direction:column;justify-content:center}
+  .fbox b{display:block;color:#fff;font-size:12.5px;margin-bottom:2px}
+  .fbox small{color:var(--dim);font-size:11px}
+  .farrow{display:flex;align-items:center;padding:0 7px;color:var(--dim);font-size:19px;flex:0 0 auto}
+  .fc-cam{border-color:var(--cam)} .fc-lidar{border-color:var(--lidar)} .fc-radar{border-color:var(--radar)}
+  .fc-imu{border-color:var(--imu)} .fc-gps{border-color:var(--gps)} .fc-acc{border-color:var(--accent)}
+  .stack{display:flex;flex-direction:column;gap:8px;margin:16px 0}
+  .lane{display:flex;align-items:center;gap:10px}
+  .lane-label{flex:0 0 108px;text-align:right;font-size:11.5px;color:var(--dim);letter-spacing:1px;font-weight:600}
+  .diagram{background:#0a0e14;border:1px solid var(--border);border-radius:12px;padding:22px;margin:16px 0;overflow-x:auto}
+  .diagram h4{font-size:12px;letter-spacing:2px;color:var(--dim);margin-bottom:16px;font-weight:600}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media (max-width:800px){.grid2{grid-template-columns:1fr}}
+  .kv{font-family:Consolas,monospace;font-size:12.5px}
+  footer{margin-top:70px;color:var(--dim);font-size:12.5px;border-top:1px solid var(--border);padding-top:18px}
+  a{color:#9fd8ff}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <h1>SENSOR SUITE <span>DOCUMENTATION</span></h1>
+  <p class="sub">AUSSIM (AUtonomy Site SIMulator) — how each simulated sensor (Camera, LiDAR, Radar, IMU, GNSS)
+  is implemented, what to consider when implementing it, its design aspects, inputs, output surfaces,
+  and per-sensor architecture &amp; data-flow diagrams.</p>
+</div></header>
+
+<div class="wrap">
+
+<div class="toc">
+  <b>Contents</b>
+  <ol>
+    <li><a href="#shared">Shared sensor architecture</a> — frames, layers, rig config, noise, rates</li>
+    <li><a href="#camera">Camera — RGB feed + object detection</a></li>
+    <li><a href="#lidar">LiDAR — rotating multi-channel scanner</a></li>
+    <li><a href="#radar">Radar — FMCW-style cone scan</a></li>
+    <li><a href="#imu">IMU — 6-DOF inertial measurement</a></li>
+    <li><a href="#gps">GNSS / RTK — geodetic positioning</a></li>
+    <li><a href="#pipeline">End-to-end data-flow diagram</a></li>
+    <li><a href="#extend">Extending the sensors</a></li>
+  </ol>
+</div>
+
+<!-- ================================================================ SHARED -->
+<h2 id="shared">1 · Shared sensor architecture</h2>
+
+<p>All five sensors follow the same pattern: they are <b>mounted to the ego-truck body frame</b>,
+read the <b>world state</b> (scene geometry, machine list, or truck kinematics), apply a
+<b>measurement model with noise</b>, and publish into a <b>2D instrument panel</b> (plus, for
+camera/LiDAR, directly into the 3D view). This mirrors how a real autonomy stack treats
+sensors as independent nodes publishing on their own clocks.</p>
+
+<div class="diagram">
+<h4>COMMON SENSOR ARCHITECTURE</h4>
+<div class="flow">
+  <div class="fbox"><b>Truck body frame</b><small>+Z forward · +Y up · +X left<br>pose from kinematics</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox"><b>Mount (Object3D)</b><small>offset x/y/z + pitch/yaw<br>from rig sliders, applied live</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox"><b>Measurement model</b><small>raycast / projection / analytic<br>+ Gaussian noise &amp; bias</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox"><b>Sensor-rate buffer</b><small>ring buffer / track list /<br>history array</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-acc"><b>Instrument panel</b><small>2D canvas @ 15 Hz<br>+ 3D overlays (debug layer)</small></div>
+</div>
+</div>
+
+<h3>1.1 Coordinate frames</h3>
+<table>
+<tr><th>Frame</th><th>Definition</th><th>Used by</th></tr>
+<tr><td><b>World</b></td><td>three.js Y-up; ground is the XZ plane; north = −Z, east = +X</td><td>scene, GPS ENU conversion, LiDAR world points</td></tr>
+<tr><td><b>Truck body</b></td><td>+Z forward, +Y up, +X left; yaw about Y with forward = (sin ψ, 0, cos ψ)</td><td>sensor mounts, IMU axes, radar boresight</td></tr>
+<tr><td><b>Ego (BEV)</b></td><td>truck frame collapsed to 2D: x = right/left, y = forward</td><td>LiDAR bird's-eye panel</td></tr>
+<tr><td><b>Image</b></td><td>NDC from projection matrix → [0..1] with y flipped</td><td>camera detections overlay</td></tr>
+<tr><td><b>Geodetic</b></td><td>WGS-84 lat/lon around site origin −23.3582°, 119.7521°</td><td>GNSS fix</td></tr>
+</table>
+
+<h3>1.2 Render-layer separation</h3>
+<p>Three render layers keep the sensors honest:</p>
+<ul>
+  <li><b>Layer 0 — physical world.</b> Terrain, machines, piles. Every camera sees it.</li>
+  <li><b>Layer 1 — debug/UI overlays.</b> Machine labels, LiDAR point cloud, sensor gizmos,
+      camera frustum helper, radar FOV wedge. Enabled only on the viewer camera —
+      <i>the sensor camera cannot see its own debug artifacts</i>, so the RGB feed stays physically plausible.</li>
+  <li><b>Layer 2 — raycast colliders.</b> Invisible oriented boxes (one per machine) + ground + rocks +
+      stockpile cone. The LiDAR raycaster is restricted to this layer via <code>raycaster.layers.set(2)</code>,
+      trading visual fidelity for a ~40× cheaper raycast set (~100 primitives vs. thousands of triangles).</li>
+</ul>
+
+<h3>1.3 Rig configuration (inputs common to camera / LiDAR / radar)</h3>
+<p>The left-panel sliders write into a single <code>rig</code> object; <code>applyRig()</code> pushes it to the
+mounts every change. Defaults (<code>DEFAULT_RIG</code>, <a href="../src/sensors.js">src/sensors.js</a>):</p>
+<pre><code>camera: { x: 0, y: 7.6, z: 5.8, pitch: -6°, yaw: 0°, fov: 70° }
+lidar:  { x: 0, y: 8.4, z: 1.0, yaw: 0°, range: 120 m }
+radar:  { x: 0, y: 3.2, z: 6.4, pitch: 0°, yaw: 0°, range: 150 m, fov: 90° }</code></pre>
+<p>Positions are meters in the truck frame (y = height above ground, z = forward of body center);
+rotations are applied to the mount <code>Object3D</code> so children (sensor + gizmo) move together.</p>
+
+<h3>1.4 Noise model</h3>
+<p>All stochastic terms use a cheap approximate Gaussian (sum of 4 uniforms, Irwin–Hall):</p>
+<pre><code>const gauss = () => (Math.random()+Math.random()+Math.random()+Math.random() - 2) / 2;  // ≈ N(0, 0.29)</code></pre>
+<p>Biases (IMU) are drawn once at construction — constant per run, like a real un-calibrated sensor.</p>
+
+<h3>1.5 Update rates</h3>
+<table>
+<tr><th>Sensor</th><th>Internal rate</th><th>Mechanism</th></tr>
+<tr><td>Camera render</td><td>every frame (~60 Hz)</td><td>second scissored render pass</td></tr>
+<tr><td>Camera detector</td><td>15 Hz</td><td>accumulator throttle in the loop</td></tr>
+<tr><td>LiDAR</td><td>45°/frame → ~7.5 Hz revolution</td><td>sector sweep per frame</td></tr>
+<tr><td>Radar</td><td>15 Hz</td><td><code>_accum</code> timer inside <code>update()</code></td></tr>
+<tr><td>IMU</td><td>every physics step</td><td>direct from kinematics</td></tr>
+<tr><td>GNSS</td><td>5 Hz</td><td><code>_accum</code> timer</td></tr>
+</table>
+<div class="note">Different sensors on different clocks is deliberate — it reproduces the
+multi-rate fusion problem (fast IMU, slow GPS) that an EKF solves in a real stack.</div>
+
+<!-- ================================================================ CAMERA -->
+<h2 id="camera"><span class="badge b-cam">CAMERA</span>2 · Camera — RGB feed + object detection</h2>
+
+<h3>2.1 What it is</h3>
+<p>A forward-looking RGB camera on the cab roof. Unlike the other sensors it is not an analytic
+model: it is a <b>real second render of the same 3D scene</b> from a pinhole
+<code>THREE.PerspectiveCamera</code>, so occlusion, perspective, lighting and shadows in the feed
+are exact. On top of the feed a <b>detector</b> draws YOLO-style 2D boxes.</p>
+
+<h3>2.2 Architecture &amp; flow</h3>
+<div class="diagram">
+<h4>CAMERA PIPELINE</h4>
+<div class="flow">
+  <div class="fbox fc-cam"><b>Mount</b><small>cab roof (0, 7.6, 5.8)<br>pitch −6°, rotY π (looks +Z)</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-cam"><b>PerspectiveCamera</b><small>FOV 70°, near 0.5, far 900<br>layers = {0} only</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-cam"><b>Render pass</b><small>setViewport + setScissor<br>to panel DOM rect</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-cam"><b>RGB feed</b><small>visible through transparent<br>panel window</small></div>
+</div>
+<div class="flow">
+  <div class="fbox fc-cam"><b>Machine list</b><small>10+ machines w/ dims + pose</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-cam"><b>OBB corner projection</b><small>8 corners → camera space<br>→ NDC; frustum reject</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-cam"><b>2D box + confidence</b><small>conf = f(distance) + jitter<br>class from machine type</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-cam"><b>Overlay canvas</b><small>boxes, labels, reticle<br>drawn @ 15 Hz</small></div>
+</div>
+</div>
+
+<h3>2.3 Implementation</h3>
+<p><b>Feed.</b> The camera is a child of a mount <code>Object3D</code> on the truck. Because three.js
+cameras look down −Z but the truck's forward is +Z, the camera is flipped with
+<code>camera.rotation.y = Math.PI</code>. Each frame the panel's <code>getBoundingClientRect()</code>
+is converted to a GL viewport (<code>y = windowHeight − rect.bottom</code>; three multiplies by
+pixel ratio internally) and the scene is rendered again inside a scissor. The camera's layer mask
+is <code>{0}</code> so labels, the LiDAR cloud and gizmos are invisible to it.</p>
+<p><b>Detector.</b> There is no neural net — the simulator has ground truth, so it emulates a
+detector's <i>output contract</i>: for each machine the 8 corners of its oriented bounding box
+(from <code>dims</code> + yaw) are transformed into camera space; corners with <code>z &gt; −0.5</code>
+(behind the near region) are discarded; the rest are projected to NDC and min/max-ed into a 2D box,
+clipped to the image. Confidence decays with range and gets ±2% jitter:</p>
+<pre><code>conf = clamp(1.04 − dist/340 + N(0, 0.02), 0.28, 0.99)   // drops below threshold ≈ 320 m</code></pre>
+
+<h3>2.4 Inputs</h3>
+<table>
+<tr><th>Input</th><th>Source</th><th>Effect</th></tr>
+<tr><td>Lateral / height / forward offset</td><td>rig sliders (m)</td><td>moves the mount in the truck frame</td></tr>
+<tr><td>Pitch −45…30°, Yaw ±180°</td><td>rig sliders</td><td>mount rotation (yaw 180° = rear-view camera)</td></tr>
+<tr><td>FOV 30–120°</td><td>rig slider</td><td>projection matrix update (+ frustum helper rebuild)</td></tr>
+<tr><td>Scene (layer 0)</td><td>world.js</td><td>what the feed shows</td></tr>
+<tr><td>Machine poses + dims</td><td>world.machines</td><td>detector ground truth</td></tr>
+</table>
+
+<h3>2.5 Where to see the output</h3>
+<ul>
+  <li><b>CAMERA panel</b> (top right): live RGB feed with green/colored detection boxes —
+      <code>class confidence% range</code> per target, crosshair reticle, REC tag.</li>
+  <li><b>HUD → DETECTIONS</b>: current detection count.</li>
+  <li><b>3D view</b>: cyan camera gizmo + wireframe frustum (toggle "Sensor gizmos").</li>
+  <li>Panel meta shows configured FOV and detection count.</li>
+</ul>
+
+<h3>2.6 Design considerations</h3>
+<ul>
+  <li><b>Same scene, second pass — not a second scene.</b> A three.js scene cannot be shared across
+      WebGL contexts, so the feed uses viewport/scissor on the <i>one</i> renderer rather than a
+      second <code>&lt;canvas&gt;</code> + renderer. This also halves GPU memory.</li>
+  <li><b>Layer hygiene.</b> Forgetting to move overlays to layer 1 makes the "camera" see its own
+      LiDAR points — a classic sim-fidelity bug.</li>
+  <li><b>Aspect &amp; DPI.</b> The projection aspect must track the panel's CSS rect, and viewport math
+      must not double-multiply by <code>devicePixelRatio</code> (three already does).</li>
+  <li><b>Detector realism knobs.</b> Range-based confidence + jitter approximates real detector
+      behavior; to be harsher, add occlusion checks (raycast to target center) and truncation-based
+      confidence reduction.</li>
+</ul>
+
+<h3>2.7 Real-stack mapping</h3>
+<p>The feed is what you would pipe into <b>YOLO / Detectron2</b>; the overlay reproduces their output
+format (class, score, xyxy box). OpenCV would sit between them for undistortion — the pinhole model
+here is distortion-free, so that stage is an identity.</p>
+
+<!-- ================================================================ LIDAR -->
+<h2 id="lidar"><span class="badge b-lidar">LIDAR</span>3 · LiDAR — rotating multi-channel scanner</h2>
+
+<h3>3.1 What it is</h3>
+<p>A 32-channel mechanical spinning LiDAR (Velodyne/Ouster class) on a mast above the cab.
+It produces a genuine <b>point cloud by raycasting</b> — every point is a real geometric
+intersection with the scene, so shadows/occlusion behave correctly.</p>
+
+<h3>3.2 Architecture &amp; flow</h3>
+<div class="diagram">
+<h4>LIDAR PIPELINE</h4>
+<div class="flow">
+  <div class="fbox fc-lidar"><b>Scan scheduler</b><small>45°/frame · 3° azimuth step<br>→ 15 columns/frame</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-lidar"><b>Beam table</b><small>32 elevations −22°…+8°<br>dir = f(truck yaw + mount yaw + az, el)</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-lidar"><b>Raycaster</b><small>layer-2 colliders only<br>far = range slider</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-lidar"><b>Return model</b><small>±0.4% range noise<br>intensity from surface class</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-lidar"><b>Ring buffer</b><small>3840 pts (1 revolution)<br>world xyz + rgb + ego xyzi</small></div>
+</div>
+<div class="lane"><div class="lane-label">OUTPUTS</div>
+  <div class="fbox"><b>THREE.Points</b><small>3D cloud in world view (layer 1)</small></div>
+  <div class="farrow">+</div>
+  <div class="fbox"><b>BEV panel</b><small>ego-frame top-down, range rings</small></div>
+  <div class="farrow">+</div>
+  <div class="fbox"><b>meta line</b><small>point count · rev Hz</small></div>
+</div>
+</div>
+
+<h3>3.3 Implementation</h3>
+<p>Per frame the scanner advances its azimuth by 45° in 3° steps; for each step it fires all 32
+channels (elevations linearly spaced −22°…+8°). Direction in world space:</p>
+<pre><code>az = truckYaw + mountYaw + azimuth
+dir = ( sin(az)·cos(el),  sin(el),  cos(az)·cos(el) )
+raycaster.set(mountWorldPos, dir);  raycaster.far = range;
+hits = raycaster.intersectObjects(colliders);          // layer-2 proxies only</code></pre>
+<p>A hit writes into a fixed-size ring buffer (<code>maxPoints = 32 × 120 = 3840</code> — exactly one
+revolution): world position (±0.4% multiplicative range noise) into the <code>THREE.Points</code>
+geometry, HSL color by height (blue→red) brightened by intensity, and an ego-frame copy
+(world delta rotated by −truckYaw) for the BEV panel. Misses park the point at y = −1000 and mark it
+invalid. 480 rays/frame ≈ 28,800 rays/s.</p>
+<p><b>Intensity</b> comes from the collider's <code>userData.intensity</code>: machines 0.95 (metal),
+stockpile 0.45, rocks 0.35, ground 0.25 — enough for the BEV panel to make obstacles pop while
+ground returns stay dim.</p>
+
+<h3>3.4 Inputs</h3>
+<table>
+<tr><th>Input</th><th>Source</th><th>Effect</th></tr>
+<tr><td>Lateral / height / forward offset</td><td>rig sliders (m)</td><td>scan origin (height changes ground-ring radius)</td></tr>
+<tr><td>Yaw offset ±180°</td><td>rig slider</td><td>rotates the scan pattern (visible as sector phase)</td></tr>
+<tr><td>Max range 40–200 m</td><td>rig slider</td><td><code>raycaster.far</code>; BEV ring scale follows</td></tr>
+<tr><td>Collider set (layer 2)</td><td>world.js</td><td>what can return a point</td></tr>
+<tr><td>Truck pose</td><td>truck.js</td><td>beam directions + ego-frame transform</td></tr>
+</table>
+
+<h3>3.5 Where to see the output</h3>
+<ul>
+  <li><b>3D world view</b>: the live point cloud (toggle "LiDAR cloud in 3D"), colored by height —
+      you can watch the sweep paint machines as the truck drives past.</li>
+  <li><b>LIDAR — BEV panel</b>: ego-centric top-down plot, 30 m range rings, ego triangle,
+      ground returns dimmed, obstacle returns bright.</li>
+  <li>Panel meta: valid point count and estimated revolution rate (≈7.5 Hz).</li>
+  <li>Green puck gizmo on the mast shows the mount.</li>
+</ul>
+
+<h3>3.6 Design considerations</h3>
+<ul>
+  <li><b>Budget the rays.</b> rays/frame = channels × (sweep°/step°). 480 vs ~100 colliders is
+      real-time; raycasting visual meshes instead would not be. Collider proxies are the single most
+      important performance decision.</li>
+  <li><b>Sector-per-frame scanning</b> (not full 360° each frame) reproduces the rolling-shutter
+      nature of spinning LiDAR — a fast-moving ego smears the cloud exactly like real logs do.</li>
+  <li><b>Ring buffer sizing</b>: exactly one revolution means old points are overwritten by the
+      returning sweep — no unbounded growth, no manual cleanup.</li>
+  <li><b>Vertical FOV asymmetry</b> (−22°/+8°) matches truck-roof mounting: most information is
+      below the horizon; raising the mast height slider visibly pushes the first ground ring outward.</li>
+  <li><b>Noise multiplicative on range</b>, not additive on position — far returns get proportionally
+      noisier, like real time-of-flight jitter.</li>
+</ul>
+
+<h3>3.7 Real-stack mapping</h3>
+<p>The ring buffer is a <code>sensor_msgs/PointCloud2</code> (xyz + intensity). The BEV panel is the
+representation BEVFusion / PointPillars rasterize before detection; PCL/Open3D would consume the same
+buffer for ground segmentation (here trivially separable via intensity/height).</p>
+
+<!-- ================================================================ RADAR -->
+<h2 id="radar"><span class="badge b-radar">RADAR</span>4 · Radar — FMCW-style cone scan</h2>
+
+<h3>4.1 What it is</h3>
+<p>A front-bumper 77 GHz-class radar. Radar is modeled <b>analytically</b> (no raycasts): it outputs
+an <b>object/track list</b> — range, bearing, radial velocity, RCS — which is what automotive radars
+actually publish after on-chip processing. It is also the sensor the truck's <b>AEB</b> uses.</p>
+
+<h3>4.2 Architecture &amp; flow</h3>
+<div class="diagram">
+<h4>RADAR PIPELINE</h4>
+<div class="flow">
+  <div class="fbox fc-radar"><b>Machine list</b><small>positions + dims<br>(radar sees metal, not rocks)</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-radar"><b>Gate</b><small>range ≤ max · |bearing| ≤ FOV/2<br>bearing = atan2 − boresight</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-radar"><b>Measurement</b><small>vr = −(v⃗ego · LOS)<br>RCS = 10·log₁₀(w·h·l) dBsm</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-radar"><b>Noise + clutter</b><small>σr 0.35 m · σθ 0.34° · σv 0.12 m/s<br>6% false alarm / scan</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-radar"><b>Track list @ 15 Hz</b><small>sorted by range</small></div>
+</div>
+<div class="lane"><div class="lane-label">CONSUMERS</div>
+  <div class="fbox"><b>PPI scope panel</b><small>wedge, sweep, blips, labels</small></div>
+  <div class="farrow">+</div>
+  <div class="fbox fc-acc"><b>AEB → truck</b><small>nearestAhead(): min range in ±12°<br>&lt; 45 m ⇒ speed cap → 0</small></div>
+</div>
+</div>
+
+<h3>4.3 Implementation</h3>
+<p>Every 1/15 s the sensor iterates the machine list. For each target within range and FOV it emits
+a track:</p>
+<pre><code>range   = |Δxz| + N(0, 0.35 m)
+bearing = wrap(atan2(Δx, Δz) − (truckYaw + mountYaw)) + N(0, 0.006 rad)
+vr      = −(v⃗ego · LOS) + N(0, 0.12 m/s)     // targets are static ⇒ ego motion only
+rcs     = 10·log10(w·h·l) + N(0, 1.5) dBsm    // size proxy</code></pre>
+<p>Because targets are stationary, closing speed is entirely ego-induced: driving toward a machine
+gives positive <code>vr</code> (closing), which the PPI colors red vs. orange. With 6% probability per
+scan a <b>clutter</b> ghost (random range/bearing, low RCS) is injected so downstream logic can't
+assume a clean sensor. <code>nearestAhead()</code> feeds the truck's AEB: any non-clutter track inside
+±12° of boresight closer than 45 m linearly caps the speed target, reaching 0 at 12 m.</p>
+
+<h3>4.4 Inputs</h3>
+<table>
+<tr><th>Input</th><th>Source</th><th>Effect</th></tr>
+<tr><td>Lateral / height / forward offset</td><td>rig sliders (m)</td><td>antenna position (height is cosmetic — model is 2D)</td></tr>
+<tr><td>Pitch ±30°, Yaw ±180°</td><td>rig sliders</td><td>boresight; yaw 180° = rear cross-traffic radar (disables forward AEB!)</td></tr>
+<tr><td>Range 40–250 m, FOV 20–160°</td><td>rig sliders</td><td>gate; PPI wedge + 3D wedge gizmo rebuild to match</td></tr>
+<tr><td>Machine list</td><td>world.machines</td><td>target set</td></tr>
+<tr><td>Ego velocity</td><td>truck.js</td><td>radial-velocity term</td></tr>
+</table>
+
+<h3>4.5 Where to see the output</h3>
+<ul>
+  <li><b>RADAR — PPI panel</b>: wedge-shaped plan-position indicator with 3 range rings, animated
+      sweep line, blips (red = closing, orange = static/opening, gray = clutter), and per-track
+      <code>range / vr</code> labels; dashed boresight.</li>
+  <li><b>3D view</b>: translucent red FOV wedge on the bumper (toggle "Sensor gizmos").</li>
+  <li><b>Behavior</b>: park a machine on the road (or yaw the radar) and watch SPEED drop — AEB in action.</li>
+  <li>Panel meta: track count + configured range.</li>
+</ul>
+
+<h3>4.6 Design considerations</h3>
+<ul>
+  <li><b>Model the output contract, not the physics.</b> Simulating chirps/FFTs is wasted effort for
+      autonomy logic; what matters downstream is the track list schema and its failure modes
+      (angular blur, clutter, no classification).</li>
+  <li><b>Angular noise ≫ range noise</b> (0.34° vs 0.35 m) — radar's real weakness. At 150 m a blip
+      wanders ~1 m laterally, which is why radar alone can't lane-assign.</li>
+  <li><b>Radial velocity is the payoff</b> — it's instantaneous and Doppler-accurate; the AEB keys on
+      geometry + range but a better implementation would gate on <code>vr &gt; 0</code> (closing only).</li>
+  <li><b>Clutter injection</b> forces consumers to be robust; the AEB filters it by class here, a real
+      system would use track persistence (M-of-N confirmation).</li>
+  <li><b>Sweep line is cosmetic</b> — the scan is instantaneous each update; the animation conveys
+      the 15 Hz cadence.</li>
+</ul>
+
+<h3>4.7 Real-stack mapping</h3>
+<p>Equivalent to a Continental ARS548 / Bosch corner-radar object list on CAN/Ethernet, or a
+<code>radar_msgs/RadarTrack</code> array in ROS 2. The AEB coupling reproduces the classic
+radar-driven longitudinal safety channel.</p>
+
+<!-- ================================================================ IMU -->
+<h2 id="imu"><span class="badge b-imu">IMU</span>5 · IMU — 6-DOF inertial measurement</h2>
+
+<h3>5.1 What it is</h3>
+<p>A cab-mounted MEMS IMU: 3-axis accelerometer + 3-axis gyroscope (+ derived roll/pitch/yaw).
+It is generated <b>from the truck's kinematic state</b> — the same signals a real IMU would sense —
+then corrupted with bias, white noise, and speed-dependent vibration.</p>
+
+<h3>5.2 Architecture &amp; flow</h3>
+<div class="diagram">
+<h4>IMU PIPELINE</h4>
+<div class="flow">
+  <div class="fbox fc-imu"><b>Vehicle kinematics</b><small>v, dv/dt, yaw rate ω<br>from EgoTruck integrator</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-imu"><b>Rigid-body model</b><small>a_long = dv/dt<br>a_lat = v·ω (centripetal)<br>a_up = g</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-imu"><b>Error model</b><small>constant bias (per run)<br>+ white noise<br>+ vibration ∝ speed</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-imu"><b>History buffers</b><small>260-sample strip-chart<br>ring per channel</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-imu"><b>Strip charts</b><small>ax · az · gyro-y<br>live values + |a| meta</small></div>
+</div>
+</div>
+
+<h3>5.3 Implementation</h3>
+<pre><code>vib     = min(1, v/8) · 0.35                       // engine/road vibration grows with speed
+accel.z = dv/dt        + bias_az + N(0,.05) + N(0,vib)   // longitudinal (braking spikes negative)
+accel.x = v·yawRate    + bias_ax + N(0,.05) + N(0,vib)   // lateral (turns)
+accel.y = 9.81         + N(0,.08) + N(0,1.6·vib)          // gravity + road chatter
+gyro.y  = yawRate      + bias_gy + N(0,.004)              // yaw rate — the navigation-critical axis
+gyro.x/z = N(0,.006·(1+vib))                              // roll/pitch rates ≈ 0 on flat terrain</code></pre>
+<p>Biases are sampled once in the constructor (σ ≈ 0.02 m/s², 0.001 rad/s) — restarting the sim
+gives a differently mis-calibrated IMU. Each update pushes into 260-sample history arrays that the
+strip-chart panel renders directly.</p>
+
+<h3>5.4 Inputs</h3>
+<table>
+<tr><th>Input</th><th>Source</th><th>Effect</th></tr>
+<tr><td>speed, accelLong, yawRate</td><td>EgoTruck integrator</td><td>the true signals being measured</td></tr>
+<tr><td>Bias draw</td><td>constructor RNG</td><td>constant offset per run (visible as non-zero flat lines at rest)</td></tr>
+<tr><td>Vibration gain</td><td>truck speed</td><td>trace "thickness" grows as the truck speeds up</td></tr>
+</table>
+<div class="note">The IMU has no rig sliders — it is body-fixed at the cab. Adding a lever-arm
+offset (a·= a + ω̇×r + ω×(ω×r)) is a good extension exercise.</div>
+
+<h3>5.5 Where to see the output</h3>
+<ul>
+  <li><b>IMU — 6-DOF panel</b>: three scrolling strip charts — lateral accel (violet), longitudinal
+      accel (cyan), yaw rate (yellow) — with live numeric values.</li>
+  <li>Recognizable signatures: departure = cyan step up; braking at B = cyan step down; each S-curve
+      = paired violet + yellow lobes; standing at load = flat biased lines with small noise.</li>
+  <li>Panel meta: |a| horizontal magnitude.</li>
+</ul>
+
+<h3>5.6 Design considerations</h3>
+<ul>
+  <li><b>Derive from the integrator, don't differentiate rendered positions</b> — finite-differencing
+      rendered transforms amplifies frame jitter into garbage accelerations. The truck exposes
+      <code>accelLong</code>/<code>yawRate</code> analytically.</li>
+  <li><b>Centripetal term matters</b>: <code>a_lat = v·ω</code> is what makes the IMU "feel" turns even
+      at constant speed — the signature an EKF uses to constrain heading.</li>
+  <li><b>Bias vs noise separation</b> is the whole point of IMU modeling: noise averages out, bias
+      does not — it's why raw IMU integration drifts and needs GPS fusion.</li>
+  <li><b>Speed-scaled vibration</b> reproduces haul-truck reality (engine + road) and gives the charts
+      an honest texture instead of clean textbook lines.</li>
+</ul>
+
+<h3>5.7 Real-stack mapping</h3>
+<p>Publishes what <code>sensor_msgs/Imu</code> carries (linear_acceleration, angular_velocity,
+orientation). Fusing this 200 Hz stream with the 5 Hz GNSS below is the canonical
+<code>robot_localization</code> EKF exercise.</p>
+
+<!-- ================================================================ GPS -->
+<h2 id="gps"><span class="badge b-gps">GNSS</span>6 · GNSS / RTK — geodetic positioning</h2>
+
+<h3>6.1 What it is</h3>
+<p>An RTK-corrected GNSS receiver (mining fleets run base-station RTK for cm-level positioning).
+It converts the truck's world position (local <b>ENU</b> meters) into <b>WGS-84 latitude/longitude</b>
+around a Pilbara-like site origin, at 5 Hz with centimeter noise, plus the standard NMEA-style
+health fields.</p>
+
+<h3>6.2 Architecture &amp; flow</h3>
+<div class="diagram">
+<h4>GNSS PIPELINE</h4>
+<div class="flow">
+  <div class="fbox fc-gps"><b>Truck world pos</b><small>x = east, −z = north (m)</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-gps"><b>RTK noise</b><small>+ N(0, 3 cm) per axis<br>@ 5 Hz epoch</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-gps"><b>ENU → geodetic</b><small>lat = lat₀ + N/111320<br>lon = lon₀ + E/(111320·cos lat₀)</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-gps"><b>Fix struct</b><small>lat lon alt vel COG<br>HDOP sats mode</small></div>
+  <div class="farrow">→</div>
+  <div class="fbox fc-gps"><b>Map + readout</b><small>breadcrumb trail (1200 pts)<br>planned path, A/B</small></div>
+</div>
+</div>
+
+<h3>6.3 Implementation</h3>
+<pre><code>east  = x + N(0, 0.03);   north = −z + N(0, 0.03)          // 3 cm RTK-fixed noise
+lat   = −23.3582 + north / 111320
+lon   = 119.7521 + east  / (111320 · cos(lat₀))
+alt   = 512.4 + N(0, 0.05)
+speed = v + N(0, 0.05);   course = (180 − deg(yaw)) mod 360  // compass COG, 0° = north, CW
+hdop  = 0.5 + |N|·0.15;   sats = 13…16;   mode = "RTK-FIX"</code></pre>
+<p>Each epoch also appends the true position to a 1200-point breadcrumb ring used by the mini-map.
+The equirectangular small-area approximation is exact enough for a ±500 m site (error ≪ noise).</p>
+
+<h3>6.4 Inputs</h3>
+<table>
+<tr><th>Input</th><th>Source</th><th>Effect</th></tr>
+<tr><td>Truck position + yaw + speed</td><td>truck.js</td><td>the fix</td></tr>
+<tr><td>Site origin lat₀/lon₀</td><td>constructor args</td><td>where on Earth the mine is</td></tr>
+<tr><td>Rate (5 Hz), noise σ</td><td>class fields</td><td>epoch cadence / fix quality (raise σ to simulate losing RTK)</td></tr>
+</table>
+
+<h3>6.5 Where to see the output</h3>
+<ul>
+  <li><b>GNSS / RTK panel readout</b>: mode, satellites, LAT/LON (6 decimals ≈ 11 cm), ALT, VEL,
+      COG, HDOP, and raw ENU meters.</li>
+  <li><b>Mini-map</b>: dashed yellow planned path, green A / orange B, cyan breadcrumb trail
+      (grows every trip), ego arrow with heading.</li>
+  <li>HUD → HEADING is the same compass convention (0° = north, clockwise).</li>
+</ul>
+
+<h3>6.6 Design considerations</h3>
+<ul>
+  <li><b>Get the frame conventions right once</b>: three.js is Y-up with −Z as "north" here; COG must
+      be <code>atan2(east, north)</code>, not raw yaw — the difference is a classic source of
+      180°-flipped headings.</li>
+  <li><b>Noise belongs in ENU meters, then converts</b> — adding noise in degrees makes it
+      latitude-dependent and unit-opaque.</li>
+  <li><b>Epoch-based updates</b> (accumulator, 5 Hz) rather than per-frame — downstream consumers must
+      handle a position that is always slightly stale, exactly like real GNSS.</li>
+  <li><b>Honest metadata</b>: HDOP/sats/mode let you script degradation scenarios
+      (e.g. <code>mode="FLOAT", σ=0.5 m</code> in a simulated pit-wall shadow) without touching consumers.</li>
+</ul>
+
+<h3>6.7 Real-stack mapping</h3>
+<p><code>sensor_msgs/NavSatFix</code> + COG/SOG from an NMEA <code>VTG</code> sentence. The
+ENU↔geodetic conversion is what <code>geodesy</code>/<code>proj</code> do around a datum; the
+breadcrumb-vs-planned-path map is a minimal fleet-management view (MineStar-style).</p>
+
+<!-- ================================================================ PIPELINE -->
+<h2 id="pipeline">7 · End-to-end data flow</h2>
+
+<div class="diagram">
+<h4>PER-FRAME PIPELINE (60 Hz LOOP, SENSOR-INTERNAL RATES DIFFER)</h4>
+<div class="stack">
+  <div class="lane"><div class="lane-label">CONTROL</div>
+    <div class="fbox fc-acc"><b>Mission FSM</b><small>LOADING → HAUL → DUMPING → RETURN</small></div>
+    <div class="farrow">→</div>
+    <div class="fbox fc-acc"><b>Pure pursuit</b><small>26 m lookahead → yaw-rate cmd</small></div>
+    <div class="farrow">→</div>
+    <div class="fbox fc-acc"><b>Speed control</b><small>cruise · curve · goal · AEB caps</small></div>
+    <div class="farrow">→</div>
+    <div class="fbox fc-acc"><b>Integrator</b><small>pose, v, ω → truck transform</small></div>
+  </div>
+  <div class="lane"><div class="lane-label">PERCEPTION</div>
+    <div class="fbox fc-cam"><b>Camera</b><small>render + detect @15 Hz</small></div>
+    <div class="farrow">·</div>
+    <div class="fbox fc-lidar"><b>LiDAR</b><small>480 rays/frame</small></div>
+    <div class="farrow">·</div>
+    <div class="fbox fc-radar"><b>Radar</b><small>tracks @15 Hz</small></div>
+    <div class="farrow">·</div>
+    <div class="fbox fc-imu"><b>IMU</b><small>every step</small></div>
+    <div class="farrow">·</div>
+    <div class="fbox fc-gps"><b>GNSS</b><small>fix @5 Hz</small></div>
+  </div>
+  <div class="lane"><div class="lane-label">FEEDBACK</div>
+    <div class="fbox fc-radar"><b>radar.nearestAhead()</b><small>±12° corridor min-range</small></div>
+    <div class="farrow">→</div>
+    <div class="fbox fc-acc"><b>truck.obstacleDist</b><small>AEB speed cap next step</small></div>
+  </div>
+  <div class="lane"><div class="lane-label">DISPLAY</div>
+    <div class="fbox"><b>Panels @15 Hz</b><small>overlay · BEV · PPI · charts · map</small></div>
+    <div class="farrow">→</div>
+    <div class="fbox"><b>2 render passes</b><small>viewer cam full-screen · sensor cam scissored</small></div>
+    <div class="farrow">→</div>
+    <div class="fbox"><b>HUD ~7 Hz</b><small>state · speed · payload · heading · dist</small></div>
+  </div>
+</div>
+</div>
+
+<p>The only sensor→control coupling today is radar AEB. Camera detections, LiDAR cloud, IMU and
+GNSS are currently display-only ground-truth-derived streams — the intended next step is to close
+the loop (e.g. EKF on IMU+GNSS replacing the truck's true pose in the tracker).</p>
+
+<!-- ================================================================ EXTEND -->
+<h2 id="extend">8 · Extending the sensors</h2>
+<ul>
+  <li><b>Camera</b>: occlusion-aware confidence (raycast to target), lens distortion via post shader,
+      a second rear camera (another mount + scissor rect).</li>
+  <li><b>LiDAR</b>: dual returns, beam divergence with range, per-channel dropout, PCD/PointCloud2
+      export of the ring buffer.</li>
+  <li><b>Radar</b>: track persistence + M-of-N confirmation, multipath ghosts near large machines,
+      closing-velocity-gated AEB.</li>
+  <li><b>IMU</b>: lever-arm compensation, bias random-walk (temperature drift), quaternion orientation
+      output.</li>
+  <li><b>GNSS</b>: RTK→FLOAT degradation zones, multipath near high walls, separate heading-from-dual-antenna.</li>
+  <li><b>Fusion</b>: a 15-state EKF consuming IMU @ high rate + GNSS @ 5 Hz, with the pure-pursuit
+      tracker consuming the <i>estimate</i> instead of ground truth — the full robotics-stack exercise.</li>
+</ul>
+
+<footer>
+  AUSSIM (AUtonomy Site SIMulator) — sensor documentation · sources:
+  <code>src/sensors.js</code>, <code>src/panels.js</code>, <code>src/truck.js</code>, <code>src/world.js</code>, <code>src/main.js</code> ·
+  see also the project <a href="../README.md">README.md</a><br>
+  AUSSIM © 2026 Lokanath. All rights reserved.
+</footer>
+
+</div>
+</body>
+</html>

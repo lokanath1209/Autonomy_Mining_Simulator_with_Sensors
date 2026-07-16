@@ -1,0 +1,30 @@
+# =====================================================================
+# AUSSIM (AUtonomy Site SIMulator) — requirements
+# © 2026 Lokanath. All rights reserved.
+# =====================================================================
+# NOTE: This is a pure JavaScript / WebGL project (no Python runtime).
+# Dependencies are managed by npm via package.json; this file documents
+# everything needed to build and run the simulator.
+#
+# ---------------------------------------------------------------------
+# System requirements
+# ---------------------------------------------------------------------
+# node        >= 18.0        (tested with v24.18.0)
+# npm         >= 9.0         (tested with 11.16.0)
+# browser     Any modern WebGL2-capable browser (Chrome / Edge / Firefox)
+# GPU         Hardware WebGL acceleration recommended (Intel iGPU is fine)
+#
+# ---------------------------------------------------------------------
+# JavaScript packages (installed with:  npm install)
+# ---------------------------------------------------------------------
+# three       ^0.165.0       3D engine: rendering, raycasting, math
+# vite        ^5.3.1         Dev server + bundler (dev dependency)
+#
+# ---------------------------------------------------------------------
+# Commands
+# ---------------------------------------------------------------------
+# npm install                install dependencies
+# npm run dev                start dev server  -> http://localhost:5173
+# npm run build              production build  -> dist/
+# npm run preview            serve the production build
+# =====================================================================
