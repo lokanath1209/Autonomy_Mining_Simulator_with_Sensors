@@ -29,4 +29,5 @@ function snapSaver() {
 
 export default defineConfig({
   plugins: [snapSaver()],
+  base: process.env.GITHUB_ACTIONS ? '/Autonomy_Mining_Simulator_with_Sensors/' : '/',
 });

@@ -7,6 +7,16 @@
   <link rel="stylesheet" href="./src/style.css" />
 </head>
 <body>
+  <!-- Auth overlay (sits above everything; removed by auth.js on sign-in) -->
+  <div id="auth-overlay">
+    <div id="auth-inner">
+      <div id="auth-logo">AUS<span>SIM</span></div>
+      <div id="auth-tagline">AUtonomy Site SIMulator</div>
+      <div id="clerk-mount"></div>
+      <p id="auth-foot">AUSSIM © 2026 Lokanath. All rights reserved.</p>
+    </div>
+  </div>
+
   <!-- Landing overlay -->
   <div id="landing">
     <div class="landing-inner">
@@ -118,6 +128,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Signed-in user badge (populated by auth.js) -->
+  <div id="auth-user-badge"></div>
 
   <script type="module" src="./src/main.js"></script>
 </body>

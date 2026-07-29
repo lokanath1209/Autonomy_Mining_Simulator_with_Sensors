@@ -5,7 +5,7 @@
   --panel-border: #232b36;
   --txt: #d7dee8;
   --dim: #7c8a9c;
-  --accent: #ffcc00;      /* CAT yellow */
+  --accent: #ffcc00;      /* AUSSIM amber */
   --green: #38e07b;
   --cyan: #35d6e8;
   --red: #ff5d5d;
@@ -19,6 +19,42 @@ body { font-family: "Segoe UI", system-ui, sans-serif; color: var(--txt); }
 .hidden { display: none !important; }
 
 #gl { position: fixed; inset: 0; display: block; }
+
+/* ---------- Auth overlay ---------- */
+#auth-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background:
+    radial-gradient(900px 400px at 50% -5%, #2a240acc, transparent),
+    linear-gradient(180deg, #090c10f8, #0b0e12fc);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#auth-inner {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: 100%; max-width: 420px; padding: 0 16px;
+}
+#auth-logo {
+  font-size: 2.6rem; font-weight: 900; letter-spacing: -1px;
+  color: #fff; line-height: 1;
+}
+#auth-logo span { color: var(--accent); }
+#auth-tagline {
+  font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--dim); margin-bottom: 18px;
+}
+#clerk-mount { width: 100%; }
+#auth-foot {
+  font-size: 0.68rem; color: #3a4455; margin-top: 10px;
+}
+
+/* Signed-in user badge (top-right after auth) */
+#auth-user-badge {
+  display: none;
+  position: fixed; top: 10px; right: 14px; z-index: 100;
+  font-size: 0.68rem; color: var(--dim);
+  background: var(--panel); border: 1px solid var(--panel-border);
+  border-radius: 4px; padding: 3px 8px;
+}
 
 /* ---------- Landing ---------- */
 #landing {

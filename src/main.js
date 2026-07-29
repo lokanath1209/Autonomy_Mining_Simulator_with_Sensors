@@ -1,4 +1,6 @@
 // AUSSIM (AUtonomy Site SIMulator) — entry point. © 2026 Lokanath.
+import { initAuth } from './auth.js';
+initAuth();
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createWorld, LAYER_DEBUG, getTerrainHeight } from './world.js';

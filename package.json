@@ -1,7 +1,7 @@
 {
   "name": "aussim",
   "version": "1.0.0",
-  "description": "AUSSIM (AUtonomy Site SIMulator) — web-based perception + autonomy simulator for CAT mining machines (camera, LiDAR, radar, GPS, IMU)",
+  "description": "AUSSIM (AUtonomy Site SIMulator) — web-based perception + autonomy simulator for autonomous mining equipment (camera, LiDAR, radar, GPS, IMU)",
   "author": "Lokanath",
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/clerk-js": "^6.25.10",
     "three": "^0.165.0"
   },
   "devDependencies": {
