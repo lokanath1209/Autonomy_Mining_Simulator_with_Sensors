@@ -3,6 +3,11 @@ import { defineConfig } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 
+// Clerk ships ESM (clerk.mjs) without UI components — force the full browser build.
+const clerkBrowserBundle = path.resolve(
+  'node_modules/@clerk/clerk-js/dist/clerk.browser.js'
+);
+
 // Dev-only helper: POST a dataURL to /__snap_save?name=foo to write snapshots/foo.jpg
 function snapSaver() {
   return {
@@ -30,4 +35,10 @@ function snapSaver() {
 export default defineConfig({
   plugins: [snapSaver()],
   base: process.env.GITHUB_ACTIONS ? '/Autonomy_Mining_Simulator_with_Sensors/' : '/',
+  resolve: {
+    alias: { '@clerk/clerk-js': clerkBrowserBundle },
+  },
+  optimizeDeps: {
+    include: ['@clerk/clerk-js'],
+  },
 });
