@@ -1,10 +1,10 @@
 // AUSSIM (AUtonomy Site SIMulator) © 2026 Lokanath.
-// Clerk auth — loaded via script tag (UMD bundle) to avoid Vite ESM/IIFE conflict.
+// Clerk vanilla-JS auth — script-tag pattern (UMD bundle, not bundled by Vite).
+// When loaded with data-clerk-publishable-key, window.Clerk is a ready instance.
 
 const KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-// Derive Clerk's CDN URL from the publishable key.
-// Key format: pk_[test|live]_[base64url(frontendApi + "$")]
+// Decode the frontend-API host from the publishable key's base64 segment.
 function _clerkUrl(key) {
   try {
     const b64 = key.split('_')[2].replace(/-/g, '+').replace(/_/g, '/');
@@ -15,13 +15,16 @@ function _clerkUrl(key) {
   }
 }
 
-function _loadScript(src) {
+// Inject Clerk's browser bundle as a plain <script> tag.
+// Setting data-clerk-publishable-key causes Clerk to auto-instantiate
+// itself as window.Clerk (an instance, not a class).
+function _loadClerkScript(src, key) {
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src;
-    s.crossOrigin = 'anonymous';
+    s.setAttribute('data-clerk-publishable-key', key);
     s.onload  = resolve;
-    s.onerror = () => reject(new Error(`Failed to load ${src}`));
+    s.onerror = () => reject(new Error('Clerk script failed to load — check your publishable key and allowed origins in the Clerk dashboard.'));
     document.head.appendChild(s);
   });
 }
@@ -75,9 +78,12 @@ export async function initAuth() {
   }
 
   try {
-    await _loadScript(scriptUrl);
+    // Load Clerk — after this, window.Clerk is a pre-instantiated Clerk object.
+    await _loadClerkScript(scriptUrl, KEY);
 
-    const clerk = new window.Clerk(KEY);
+    const clerk = window.Clerk;
+    if (!clerk) throw new Error('window.Clerk not found after script load.');
+
     await clerk.load({ appearance: CLERK_APPEARANCE });
 
     if (clerk.user) {
@@ -86,9 +92,9 @@ export async function initAuth() {
     }
 
     clerk.mountSignIn(document.getElementById('clerk-mount'), {
-      appearance:      CLERK_APPEARANCE,
-      afterSignInUrl:  window.location.href,
-      afterSignUpUrl:  window.location.href,
+      appearance:     CLERK_APPEARANCE,
+      afterSignInUrl: window.location.href,
+      afterSignUpUrl: window.location.href,
     });
 
     clerk.addListener(({ user }) => {
