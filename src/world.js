@@ -1,12 +1,12 @@
 // AUSSIM (AUtonomy Site SIMulator) © 2026 Lokanath.
-// World construction: Boddington-style mine terrain, haul road, A/B markers, CAT machines.
+// World construction: Boddington-style mine terrain, haul road, A/B markers, mining machines.
 import * as THREE from 'three';
 
 export const LAYER_DEFAULT = 0;
 export const LAYER_DEBUG = 1;
 export const LAYER_COLLIDER = 2;
 
-const CAT_YELLOW = 0xf2b307;
+const MINE_YELLOW = 0xf2b307;
 const DARK = 0x23262a;
 const TIRE = 0x1a1c1e;
 
@@ -59,7 +59,7 @@ export function makeLabel(text, color = '#ffd83d') {
 
 // ---------------------------------------------------------------- machines
 
-export function makeHaulTruck(bodyColor = CAT_YELLOW) {
+export function makeHaulTruck(bodyColor = MINE_YELLOW) {
   const g = new THREE.Group();
   g.add(box(6.4, 1.6, 10.5, DARK, 0, 2.6, 0.4));
   g.add(box(7.4, 0.5, 4.4, bodyColor, 0, 3.9, 3.4));
@@ -84,26 +84,44 @@ export function makeHaulTruck(bodyColor = CAT_YELLOW) {
   g.add(box(7.2, 2.6, 0.9, bodyColor, 0, 2.7, 5.6));
   g.add(box(6.6, 0.5, 0.5, 0xd8d8d8, 0, 4.35, 5.85));
   g.add(box(0.5, 3.4, 0.4, 0xb9bec5, -3.6, 2.2, 5.2));
+  // Payload: a full, heaping load of broken rock/ore filling the bed edge-to-edge
+  // and mounding above the side walls, like a fully-loaded haul truck.
   const payload = new THREE.Group();
-  const heapGeo = new THREE.SphereGeometry(1, 16, 12);
+  const heapGeo = new THREE.SphereGeometry(1, 18, 14);
   const hp = heapGeo.attributes.position;
   for (let i = 0; i < hp.count; i++) {
-    const j = 0.9 + Math.random() * 0.18;
+    const j = 0.85 + Math.random() * 0.25;
     hp.setXYZ(i, hp.getX(i) * j, hp.getY(i) * j, hp.getZ(i) * j);
   }
   heapGeo.computeVertexNormals();
-  const heap = new THREE.Mesh(heapGeo, mat(0x6b5a44, 1, 0));
-  heap.scale.set(3.3, 2.1, 4.3);
-  heap.position.y = 0.7;
+  const heap = new THREE.Mesh(heapGeo, mat(0x86888a, 1, 0));
+  heap.scale.set(3.9, 2.6, 4.7);
+  heap.position.y = 1.3;
   heap.castShadow = true;
   payload.add(heap);
-  for (let i = 0; i < 8; i++) {
-    const r = 0.4 + Math.random() * 0.55;
-    const lump = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), mat(0x7d6a50, 1, 0));
-    const a = Math.random() * Math.PI * 2, d = Math.random() * 0.8;
-    lump.position.set(Math.cos(a) * d * 2.6, 1.9 + Math.random() * 0.7 - d * 0.9, Math.sin(a) * d * 3.4);
-    lump.rotation.set(Math.random(), Math.random() * 3, Math.random());
+  const rockColors = [0x9a9c9e, 0x707377, 0x86888a, 0x5f6266];
+  const rockLump = (r, x, y, z) => {
+    const lump = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0),
+      mat(rockColors[(Math.random() * rockColors.length) | 0], 1, 0));
+    lump.position.set(x, y, z);
+    lump.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+    lump.castShadow = true;
     payload.add(lump);
+  };
+  // Low base layer laid out on a grid spanning the full inner floor — guarantees
+  // corner-to-corner, wall-to-wall coverage so no bare bed/floor ever peeks through,
+  // regardless of how the tapered mound above happens to fall.
+  for (const gx of [-2.7, -1.35, 0, 1.35, 2.7]) {
+    for (const gz of [-4.1, -2.5, -0.9, 0.7, 2.3, 3.7]) {
+      rockLump(0.6 + Math.random() * 0.35,
+        gx + (Math.random() - 0.5) * 0.6, 0.55 + Math.random() * 0.35, gz + (Math.random() - 0.5) * 0.6);
+    }
+  }
+  // Taller scattered rocks on top for the heaping, domed silhouette.
+  for (let i = 0; i < 22; i++) {
+    const r = 0.5 + Math.random() * 0.85;
+    const a = Math.random() * Math.PI * 2, d = Math.random();
+    rockLump(r, Math.cos(a) * d * 3.5, 2.1 + Math.random() * 1.7, Math.sin(a) * d * 4.4);
   }
   payload.position.set(0, 0.5, -0.4);
   bed.add(payload);
@@ -129,10 +147,10 @@ export function makeDozer() {
       g.add(roller);
     }
   }
-  g.add(box(3.4, 2.2, 5.6, CAT_YELLOW, 0, 2.9, -0.4));
+  g.add(box(3.4, 2.2, 5.6, MINE_YELLOW, 0, 2.9, -0.4));
   g.add(box(2.4, 2.0, 2.2, 0x2e3238, 0, 5.0, -1.2));
   g.add(cyl(0.35, 0.35, 1.6, 0x3a3f45, 1.2, 4.6, 1.8, 8));
-  const blade = box(6.4, 2.4, 0.55, CAT_YELLOW, 0, 1.7, 3.9);
+  const blade = box(6.4, 2.4, 0.55, MINE_YELLOW, 0, 1.7, 3.9);
   blade.rotation.x = -0.18;
   g.add(blade);
   g.add(box(0.5, 0.5, 3.0, 0x74797f, -2.2, 1.9, 2.2));
@@ -149,13 +167,13 @@ export function makeExcavator() {
   for (const s of [-1, 1]) g.add(box(1.5, 1.7, 7.4, 0x2a2d31, s * 2.4, 0.9, 0));
   g.add(box(5.2, 0.7, 5.2, 0x3a3f45, 0, 2.0, 0));
   const house = new THREE.Group();
-  house.add(box(4.8, 2.6, 6.6, CAT_YELLOW, 0, 1.4, -0.8));
+  house.add(box(4.8, 2.6, 6.6, MINE_YELLOW, 0, 1.4, -0.8));
   house.add(box(2.0, 2.2, 2.0, 0x2e3238, -1.4, 2.9, 1.6));
   house.add(box(4.6, 2.2, 1.4, 0x35383c, 0, 1.5, -3.9));
   const boomGroup = new THREE.Group();
   boomGroup.position.set(0.9, 2.0, 2.4);
   boomGroup.rotation.x = -0.72;
-  boomGroup.add(box(1.1, 1.6, 7.0, CAT_YELLOW, 0, 0, 3.3));
+  boomGroup.add(box(1.1, 1.6, 7.0, MINE_YELLOW, 0, 0, 3.3));
   const boomCyl = cyl(0.17, 0.17, 4.4, 0x8f959c, 0, -1.0, 2.6, 8);
   boomCyl.rotation.x = Math.PI / 2 - 0.3;
   boomGroup.add(boomCyl);
@@ -163,7 +181,7 @@ export function makeExcavator() {
   const stickGroup = new THREE.Group();
   stickGroup.position.set(0, 0, 6.7);
   stickGroup.rotation.x = 1.45;
-  stickGroup.add(box(0.9, 1.2, 4.4, CAT_YELLOW, 0, 0, 2.0));
+  stickGroup.add(box(0.9, 1.2, 4.4, MINE_YELLOW, 0, 0, 2.0));
   const crowdCyl = cyl(0.14, 0.14, 3.0, 0x8f959c, 0, 0.9, 1.4, 8);
   crowdCyl.rotation.x = Math.PI / 2 - 0.4;
   stickGroup.add(crowdCyl);
@@ -220,10 +238,129 @@ export function makeMaterialPile(radius = 8, height = 4) {
   return g;
 }
 
+export function makeShovel(bodyColor = MINE_YELLOW) {
+  const g = new THREE.Group();
+
+  // === Undercarriage (crawlers + carbody) ===
+  const trackW = 2.6, trackH = 1.8, trackL = 12.0;
+  g.add(box(trackW, trackH, trackL, DARK, -3.6, trackH / 2, 0));
+  g.add(box(trackW, trackH, trackL, DARK,  3.6, trackH / 2, 0));
+  for (const sx of [-3.6, 3.6]) {
+    const sp = cyl(0.95, 0.95, trackW, 0x2a2e33, sx, trackH / 2, -trackL / 2 + 0.9, 10);
+    sp.rotation.z = Math.PI / 2; g.add(sp);
+    const id = cyl(0.95, 0.95, trackW, 0x2a2e33, sx, trackH / 2,  trackL / 2 - 0.9, 10);
+    id.rotation.z = Math.PI / 2; g.add(id);
+  }
+  for (let i = 0; i < 11; i++) {
+    const z = -4.8 + i * 1.0;
+    g.add(box(trackW + 0.18, 0.20, 0.82, 0x3a3e44, -3.6, trackH + 0.06, z));
+    g.add(box(trackW + 0.18, 0.20, 0.82, 0x3a3e44,  3.6, trackH + 0.06, z));
+  }
+  g.add(box(7.6, 1.1, 5.0, 0x3a3e44, 0, 1.55, 0));          // carbody cross-frame
+  g.add(cyl(3.2, 3.2, 0.35, 0x555a5f, 0, 2.25, 0, 16));     // slew ring
+
+  // === Upper house (slews on Y axis) ===
+  const house = new THREE.Group();
+  house.position.set(0, 2.4, 0);
+  g.add(house);
+  g.userData.house = house;
+
+  house.add(box(8.0, 3.6, 9.5, bodyColor, 0, 1.8, 0));            // engine deck
+  house.add(box(8.4, 3.0, 2.5, 0x3a3e44, 0, 1.5, -5.5));         // counterweight
+  house.add(box(8.2, 0.4, 2.4, 0x555a5f, 0, 3.1, -5.5));         // cw top plate
+  house.add(box(3.0, 3.4, 3.2, bodyColor, -2.2, 3.7, 4.0));      // cab
+  house.add(box(2.8, 2.6, 0.14, 0x9fd8ff, -2.2, 3.9, 5.58));    // cab front glass
+  house.add(box(0.14, 2.6, 3.0, 0x9fd8ff, -3.64, 3.9, 4.0));    // cab left glass
+  house.add(box(3.0, 0.32, 3.2, bodyColor, -2.2, 5.5, 4.0));     // cab roof
+  house.add(box(4.2, 1.2, 2.8, bodyColor, 1.6, 4.4, 0.4));       // machinery cover
+  house.add(box(3.6, 1.2, 2.4, bodyColor, 1.6, 4.4, -2.8));      // engine cover
+  house.add(cyl(0.24, 0.18, 3.2, DARK, 2.8, 5.8, -0.6, 8));     // exhaust stack
+  // A-frame gantry
+  house.add(box(0.60, 5.5, 0.60, 0x7a8288, -1.6, 5.15, 3.5));
+  house.add(box(0.60, 5.5, 0.60, 0x7a8288,  1.6, 5.15, 3.5));
+  house.add(box(3.8, 0.44, 0.44, 0x7a8288, 0, 7.95, 3.5));      // gantry cross-bar
+  house.add(box(0.44, 0.44, 4.5, 0x7a8288, -1.6, 7.95, 5.75)); // gantry stay L
+  house.add(box(0.44, 0.44, 4.5, 0x7a8288,  1.6, 7.95, 5.75)); // gantry stay R
+
+  // === Boom (rotation.x pivots to raise / lower) ===
+  const boomPivot = new THREE.Group();
+  boomPivot.position.set(0, 1.4, 4.5);
+  house.add(boomPivot);
+  g.userData.boom = boomPivot;
+
+  const boomL = 10.5;
+  boomPivot.add(box(1.0, 1.0, boomL, 0x5a6069, -1.1, 0, boomL / 2));
+  boomPivot.add(box(1.0, 1.0, boomL, 0x5a6069,  1.1, 0, boomL / 2));
+  boomPivot.add(box(2.6, 0.65, 0.65, 0x5a6069, 0, 0, 1.8));          // foot cross
+  boomPivot.add(box(2.6, 0.65, 0.65, 0x5a6069, 0, 0, boomL - 0.6)); // tip cross
+  const bCyl = cyl(0.32, 0.32, boomL * 0.68, 0x8a9099, 0, 0, boomL * 0.34, 8);
+  bCyl.rotation.x = -0.15;
+  boomPivot.add(bCyl);
+
+  // === Stick / dipper arm ===
+  const stickPivot = new THREE.Group();
+  stickPivot.position.set(0, 0, boomL);
+  stickPivot.rotation.x = 0.5; // stick angles slightly downward from boom tip
+  boomPivot.add(stickPivot);
+
+  const stickL = 6.0;
+  stickPivot.add(box(0.85, 0.85, stickL, 0x5a6069, 0, 0, stickL / 2));
+  const sCyl = cyl(0.24, 0.24, stickL * 0.7, 0x8a9099, 0, 0.6, stickL * 0.35, 8);
+  sCyl.rotation.x = 0.12;
+  stickPivot.add(sCyl);
+
+  // === Bucket (rotation.x curls / dumps) ===
+  const bucketPivot = new THREE.Group();
+  bucketPivot.position.set(0, 0, stickL);
+  stickPivot.add(bucketPivot);
+  g.userData.bucket = bucketPivot;
+
+  const bW = 5.2, bH = 2.6, bD = 3.0, bm = 0x4a5260;
+  bucketPivot.add(box(bW, 0.36, bD, bm, 0, -bH / 2, bD / 2));       // floor
+  bucketPivot.add(box(bW, bH, 0.36, bm, 0, 0, 0));                    // back wall
+  bucketPivot.add(box(0.36, bH + 0.36, bD, bm, -bW / 2 + 0.18, 0, bD / 2)); // left cheek
+  bucketPivot.add(box(0.36, bH + 0.36, bD, bm,  bW / 2 - 0.18, 0, bD / 2)); // right cheek
+  bucketPivot.add(box(bW, 0.42, 0.65, 0x3d4248, 0, -bH / 2, bD + 0.04));    // cutting edge
+  for (let i = 0; i < 6; i++) {
+    const t = box(0.38, 0.88, 0.32, 0x3d4248,
+      -bW / 2 + 0.56 + i * (bW - 1.12) / 5, -bH / 2 - 0.78, bD + 0.2);
+    t.rotation.x = -0.3;
+    bucketPivot.add(t);
+  }
+  const bktCyl = cyl(0.24, 0.24, 2.4, 0x8a9099, 0, 0.5, 1.3, 8);
+  bktCyl.rotation.x = 0.5;
+  bucketPivot.add(bktCyl);
+
+  // Bucket load heap (shown while carrying material)
+  const bucketLoad = new THREE.Group();
+  const hGeo = new THREE.SphereGeometry(1, 12, 9);
+  const hPos = hGeo.attributes.position;
+  for (let i = 0; i < hPos.count; i++) {
+    const j = 0.88 + Math.random() * 0.22;
+    hPos.setXYZ(i, hPos.getX(i) * j, hPos.getY(i) * j, hPos.getZ(i) * j);
+  }
+  hGeo.computeVertexNormals();
+  const bHeap = new THREE.Mesh(hGeo,
+    new THREE.MeshStandardMaterial({
+      color: 0xa9885a, roughness: 0.95, metalness: 0,
+      emissive: 0x5a4020, emissiveIntensity: 0.9,
+    }));
+  bHeap.scale.set(2.6, 1.7, 1.7);
+  bHeap.position.set(0, 0.55, bD / 2);   // mounded well above the rim so it reads from any angle
+  bHeap.castShadow = true;
+  bucketLoad.add(bHeap);
+  bucketLoad.visible = false;
+  bucketPivot.add(bucketLoad);
+  g.userData.bucketLoad = bucketLoad;
+
+  g.userData.dims = { w: 9.2, h: 10.5, l: 12.0 };
+  return g;
+}
+
 export function makeGrader() {
   const g = new THREE.Group();
-  g.add(box(1.4, 1.1, 9.5, CAT_YELLOW, 0, 2.3, 1.5));
-  g.add(box(3.2, 2.4, 4.4, CAT_YELLOW, 0, 2.2, -3.0));
+  g.add(box(1.4, 1.1, 9.5, MINE_YELLOW, 0, 2.3, 1.5));
+  g.add(box(3.2, 2.4, 4.4, MINE_YELLOW, 0, 2.2, -3.0));
   g.add(box(2.2, 2.0, 1.9, 0x2e3238, 0, 4.2, -1.2));
   const blade = box(5.6, 1.3, 0.4, 0x8f959c, 0, 1.0, 0.8);
   blade.rotation.y = 0.5; blade.rotation.x = -0.2;
@@ -267,7 +404,7 @@ export function makeSCOM() {
 
 export function makeLightTower() {
   const g = new THREE.Group();
-  g.add(box(2.4, 1.4, 3.6, CAT_YELLOW, 0, 1.0, 0));
+  g.add(box(2.4, 1.4, 3.6, MINE_YELLOW, 0, 1.0, 0));
   g.add(cyl(0.14, 0.2, 8.6, 0x9aa1a8, 0, 5.9, 0, 8));
   const head = new THREE.Group();
   for (let i = 0; i < 4; i++) {
@@ -477,12 +614,12 @@ export function createWorld(scene) {
     return m;
   }
 
-  // Loader (6060 FS) beside point A
+  // Wheel loader beside point A
   const A = path[0];
   const roadYawA = Math.atan2(path[1].x - A.x, path[1].z - A.z);
   const perpA = new THREE.Vector3(Math.cos(roadYawA), 0, -Math.sin(roadYawA));
   const loaderPos = A.clone().addScaledVector(perpA, 17);
-  const loader = addMachine(makeExcavator(), 'excavator', 'LDR-60 · 6060 FS',
+  const loader = addMachine(makeShovel(), 'shovel', 'SH-01 · MHS-9020',
     loaderPos.x, loaderPos.z, Math.atan2(A.x - loaderPos.x, A.z - loaderPos.z));
   loader.isLoader = true;
 
@@ -513,13 +650,13 @@ export function createWorld(scene) {
 
   // ---- Random machine placement ----
   const machineDefs = [
-    { make: () => makeHaulTruck(), cls: 'haul_truck', label: 'MTTT-01 · 797F' },
-    { make: () => makeHaulTruck(0xe0a400), cls: 'haul_truck', label: 'MTTT-02 · 797F' },
+    { make: () => makeHaulTruck(), cls: 'haul_truck', label: 'MTTT-01 · AHT-797' },
+    { make: () => makeHaulTruck(0xe0a400), cls: 'haul_truck', label: 'MTTT-02 · AHT-797' },
     { make: makeSCOM, cls: 'scom_unit', label: 'SCOM-1 · SITE CMD' },
-    { make: makeDozer, cls: 'dozer', label: 'DZ-11 · D11T' },
-    { make: makeDozer, cls: 'dozer', label: 'DZ-12 · D11T' },
-    { make: makeGrader, cls: 'grader', label: 'GR-24 · 24M' },
-    { make: makeWaterTruck, cls: 'water_truck', label: 'WT-77 · 777 WTR' },
+    { make: makeDozer, cls: 'dozer', label: 'DZ-11 · HBD-11' },
+    { make: makeDozer, cls: 'dozer', label: 'DZ-12 · HBD-11' },
+    { make: makeGrader, cls: 'grader', label: 'GR-24 · MGR-24' },
+    { make: makeWaterTruck, cls: 'water_truck', label: 'WT-77 · HWT-77' },
     { make: makeLightTower, cls: 'light_tower', label: 'LT-05' },
     { make: makeLightTower, cls: 'light_tower', label: 'LT-06' },
   ];

@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createWorld, LAYER_DEBUG, getTerrainHeight } from './world.js';
-import { EgoTruck } from './truck.js';
+import { Truck } from './truck.js';
 import { CameraSensor, LidarSensor, RadarSensor, IMUSensor, GPSSensor } from './sensors.js';
 import { drawDetections, drawLidarBEV, drawRadarPPI, drawIMU, drawGPS, formatGPSReadout } from './panels.js';
 import { buildSensorConfigUI, buildSimSliders, freshRig } from './ui.js';
@@ -18,7 +18,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
 const world = createWorld(scene);
-const truck = new EgoTruck(scene, world.path, getTerrainHeight);
+const truck = new Truck(scene, world.path, getTerrainHeight);
 
 // main viewer camera (sees default + debug layers)
 const viewCam = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 3000);
@@ -84,6 +84,15 @@ $('btn-sensors-reset').onclick = () => {
   applyRig();
   rigUI.refresh();
 };
+function wireMinimize(panelId, btnId) {
+  $(btnId).onclick = () => {
+    const collapsed = $(panelId).classList.toggle('collapsed');
+    $(btnId).textContent = collapsed ? '+' : '−';
+    $(btnId).title = collapsed ? 'Maximize' : 'Minimize';
+  };
+}
+wireMinimize('left-panel', 'btn-min-left');
+wireMinimize('right-panel', 'btn-min-right');
 $('chk-lidar-pts').onchange = e => { lidar.points.visible = e.target.checked; };
 $('chk-gizmos').onchange = e => {
   camSensor.helper.visible = e.target.checked;
@@ -106,33 +115,109 @@ window.addEventListener('resize', () => {
 });
 
 // ------------------------------------------------------------- load / dump choreography
-const loaderGrp = world.loader.group;
-const loaderHouse = loaderGrp.userData.house;
-const loaderBoom = loaderGrp.userData.boom;
-const loaderBoomRest = loaderBoom.rotation.x;
-const loaderBucket = loaderGrp.userData.bucket;
-const loaderBucketRest = loaderBucket.rotation.x;
-const yawToLocal = target => {
-  const a = Math.atan2(target.x - loaderGrp.position.x, target.z - loaderGrp.position.z);
-  return Math.atan2(Math.sin(a - loaderGrp.rotation.y), Math.cos(a - loaderGrp.rotation.y));
-};
-const houseYawPile = yawToLocal(world.loadPile.position);
-const houseYawTruck = yawToLocal(world.path[0]);
+const shovelGrp       = world.loader.group;
+const shovelHouse     = shovelGrp.userData.house;
+const shovelBoom      = shovelGrp.userData.boom;
+const shovelBucket    = shovelGrp.userData.bucket;
+const shovelBucketLoad = shovelGrp.userData.bucketLoad;
+const shovelRestYaw   = shovelGrp.rotation.y;
+
+// Direction vectors from shovel to pile and to truck stop
+const _pileVec = new THREE.Vector3(
+  world.loadPile.position.x - shovelGrp.position.x, 0,
+  world.loadPile.position.z - shovelGrp.position.z).normalize();
+const _truckVec = new THREE.Vector3(
+  world.path[0].x - shovelGrp.position.x, 0,
+  world.path[0].z - shovelGrp.position.z).normalize();
+
+// House slew angles relative to the shovel group's own yaw
+const _yawToPile  = Math.atan2(_pileVec.x,  _pileVec.z);
+const _yawToTruck = Math.atan2(_truckVec.x, _truckVec.z);
+const houseYawToPile  = _yawToPile  - shovelRestYaw;
+const houseYawToTruck = _yawToTruck - shovelRestYaw;
+
+// Boom rotation.x: negative lifts the boom up (right-hand rule around X)
+const BOOM_REST  = -0.65;  // ready position — ~37° elevation
+const BOOM_DIG   = -0.40;  // lowered toward face for digging
+const BOOM_HIGH  = -1.00;  // raised for slewing with full bucket
+
+// Bucket rotation.x: positive curls back (material retained), negative tips forward (dump)
+const BUCK_REST  =  0.30;  // slight curl at idle
+const BUCK_DIG   = -0.40;  // open for digging
+const BUCK_CURL  =  1.10;  // curled, retaining material
+const BUCK_DUMP  = -0.80;  // tipped forward to dump into truck
+
+function lerpYaw(cur, tgt, f) {
+  const d = ((tgt - cur + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+  return cur + d * f;
+}
 
 function updateWorldAnims(dt) {
   if (truck.state === 'LOADING') {
-    const cycle = 3.4;
-    const ph = (truck.simTime % cycle) / cycle;
-    const s = 0.5 - 0.5 * Math.cos(ph * Math.PI * 2);
-    loaderHouse.rotation.y = THREE.MathUtils.lerp(houseYawPile, houseYawTruck, s);
-    loaderBoom.rotation.x = loaderBoomRest + Math.sin(ph * Math.PI * 2) * 0.12;
-    loaderBucket.rotation.x = loaderBucketRest - 0.35 + s * 0.75;
+    const p = truck.load;
+    let tHouseYaw, tBoom, tBuck, showLoad = false;
+
+    if (p < 0.18) {
+      // Phase 1 — slew house toward pile, lower boom, open bucket for dig
+      const t = THREE.MathUtils.smoothstep(p / 0.18, 0, 1);
+      tHouseYaw = houseYawToPile;
+      tBoom = THREE.MathUtils.lerp(BOOM_REST, BOOM_DIG, t);
+      tBuck = THREE.MathUtils.lerp(BUCK_REST, BUCK_DIG, t);
+
+    } else if (p < 0.40) {
+      // Phase 2 — crowd into face, curl bucket to capture material
+      const t = THREE.MathUtils.smoothstep((p - 0.18) / 0.22, 0, 1);
+      tHouseYaw = houseYawToPile;
+      tBoom = THREE.MathUtils.lerp(BOOM_DIG, BOOM_DIG - 0.15, t);
+      tBuck = THREE.MathUtils.lerp(BUCK_DIG, BUCK_CURL, t);
+      showLoad = p > 0.32;
+
+    } else if (p < 0.58) {
+      // Phase 3 — raise boom with full bucket
+      const t = THREE.MathUtils.smoothstep((p - 0.40) / 0.18, 0, 1);
+      tHouseYaw = houseYawToPile;
+      tBoom = THREE.MathUtils.lerp(BOOM_DIG - 0.15, BOOM_HIGH, t);
+      tBuck = BUCK_CURL;
+      showLoad = true;
+
+    } else if (p < 0.72) {
+      // Phase 4 — slew house toward truck with raised boom
+      const t = THREE.MathUtils.smoothstep((p - 0.58) / 0.14, 0, 1);
+      tHouseYaw = THREE.MathUtils.lerp(houseYawToPile, houseYawToTruck, t);
+      tBoom = BOOM_HIGH;
+      tBuck = BUCK_CURL;
+      showLoad = true;
+
+    } else if (p < 0.88) {
+      // Phase 5 — position over truck, tip bucket to dump
+      const t = THREE.MathUtils.smoothstep((p - 0.72) / 0.16, 0, 1);
+      tHouseYaw = houseYawToTruck;
+      tBoom = BOOM_HIGH;
+      tBuck = THREE.MathUtils.lerp(BUCK_CURL, BUCK_DUMP, t);
+      showLoad = p < 0.82;
+
+    } else {
+      // Phase 6 — slew back toward pile, reset to ready
+      const t = THREE.MathUtils.smoothstep((p - 0.88) / 0.12, 0, 1);
+      tHouseYaw = THREE.MathUtils.lerp(houseYawToTruck, houseYawToPile, t);
+      tBoom = THREE.MathUtils.lerp(BOOM_HIGH, BOOM_REST, t);
+      tBuck = THREE.MathUtils.lerp(BUCK_DUMP, BUCK_REST, t);
+    }
+
+    shovelHouse.rotation.y  = lerpYaw(shovelHouse.rotation.y, tHouseYaw, Math.min(1, dt * 4));
+    shovelBoom.rotation.x   += (tBoom - shovelBoom.rotation.x)   * Math.min(1, dt * 5);
+    shovelBucket.rotation.x += (tBuck - shovelBucket.rotation.x) * Math.min(1, dt * 5);
+    shovelBucketLoad.visible = showLoad;
+
   } else {
-    loaderHouse.rotation.y += (houseYawPile - loaderHouse.rotation.y) * Math.min(1, dt * 1.5);
-    loaderBoom.rotation.x += (loaderBoomRest - loaderBoom.rotation.x) * Math.min(1, dt * 1.5);
-    loaderBucket.rotation.x += (loaderBucketRest - loaderBucket.rotation.x) * Math.min(1, dt * 1.5);
+    // Idle: house slews back to pile-facing, boom and bucket reset to ready
+    shovelHouse.rotation.y  = lerpYaw(shovelHouse.rotation.y, houseYawToPile, Math.min(1, dt * 1.8));
+    shovelBoom.rotation.x   += (BOOM_REST - shovelBoom.rotation.x)   * Math.min(1, dt * 1.8);
+    shovelBucket.rotation.x += (BUCK_REST - shovelBucket.rotation.x) * Math.min(1, dt * 1.8);
+    shovelBucketLoad.visible = false;
   }
 
+  // Dump pile grows as truck unloads at B
   const dumped = truck.totalDumped + (truck.state === 'DUMPING' ? 1 - truck.load : 0);
   if (dumped > 0.02) {
     world.dumpPile.visible = true;
@@ -202,7 +287,7 @@ function updateHUD(dt, dets) {
   hudAccum = 0;
   $('hud-state').textContent = truck.state;
   $('hud-speed').textContent = `${(truck.speed * 3.6).toFixed(1)} km/h`;
-  $('hud-payload').textContent = `${Math.round(truck.load * 100)}%`;
+  $('hud-payload').textContent = `${Math.round(truck.displayLoad * 100)}%`;
   const compass = ((180 - THREE.MathUtils.radToDeg(truck.yaw)) % 360 + 360) % 360;
   $('hud-heading').textContent = `${compass.toFixed(0).padStart(3, '0')}°`;
   $('hud-pitch').textContent = `${THREE.MathUtils.radToDeg(truck.pitch || 0).toFixed(1)}°`;

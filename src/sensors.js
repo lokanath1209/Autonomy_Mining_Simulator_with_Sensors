@@ -1,5 +1,5 @@
 // AUSSIM (AUtonomy Site SIMulator) © 2026 Lokanath.
-// Simulated sensor suite mounted on the ego truck.
+// Simulated sensor suite mounted on the truck.
 // Camera: real render pass from a pinhole camera + projected 3D->2D detections (YOLO-style).
 // LiDAR:  rotating multi-channel raycaster producing a live point cloud.
 // Radar:  FMCW-style cone scan with range / bearing / radial-velocity tracks.
@@ -45,7 +45,7 @@ export class CameraSensor {
     if (this.camera.fov !== c.fov) { this.camera.fov = c.fov; this.camera.updateProjectionMatrix(); }
   }
   // Project machine bounding boxes into the image -> detection list.
-  detect(machines, egoPos) {
+  detect(machines, truckPos) {
     this.camera.updateMatrixWorld();
     const dets = [];
     const v = new THREE.Vector3();
@@ -102,7 +102,7 @@ export class LidarSensor {
     this.maxPoints = this.channels * Math.ceil(360 / this.azStep);
     this.positions = new Float32Array(this.maxPoints * 3);
     this.colors = new Float32Array(this.maxPoints * 3);
-    this.meta = new Float32Array(this.maxPoints * 4);  // ego-relative x,z,y + intensity for BEV panel
+    this.meta = new Float32Array(this.maxPoints * 4);  // truck-relative x,z,y + intensity for BEV panel
     this.valid = new Uint8Array(this.maxPoints);
     this.writeIdx = 0;
     this.pointCount = 0;
@@ -158,10 +158,10 @@ export class LidarSensor {
           const t = Math.min(1, py / 9);
           this._color.setHSL(0.62 - t * 0.62, 1, 0.35 + intensity * 0.3);
           this.colors[idx * 3] = this._color.r; this.colors[idx * 3 + 1] = this._color.g; this.colors[idx * 3 + 2] = this._color.b;
-          // ego frame (for BEV): rotate world delta by -truck.yaw
+          // truck frame (for BEV): rotate world delta by -truck.yaw
           const dx = px - truck.pos.x, dz = pz - truck.pos.z;
           const cy = Math.cos(-truck.yaw), sy = Math.sin(-truck.yaw);
-          this.meta[idx * 4] = dx * cy + dz * sy;          // right(+)/left(-)... x in ego frame
+          this.meta[idx * 4] = dx * cy + dz * sy;          // right(+)/left(-)... x in truck frame
           this.meta[idx * 4 + 1] = -dx * sy + dz * cy;     // forward
           this.meta[idx * 4 + 2] = py;
           this.meta[idx * 4 + 3] = intensity;
@@ -233,7 +233,7 @@ export class RadarSensor {
     const radarPos = new THREE.Vector3();
     this.mount.getWorldPosition(radarPos);
     const boresight = truck.yaw + this.yawOffset;
-    const egoVel = truck.velocity;
+    const truckVel = truck.velocity;
     const half = THREE.MathUtils.degToRad(this.fov / 2);
 
     this.tracks = [];
@@ -245,9 +245,9 @@ export class RadarSensor {
       if (range > this.range || range < 2) continue;
       const bearing = wrap(Math.atan2(dx, dz) - boresight);
       if (Math.abs(bearing) > half) continue;
-      // radial velocity: target static, so v_r = -projection of ego velocity on LOS
+      // radial velocity: target static, so v_r = -projection of truck velocity on LOS
       const losX = dx / range, losZ = dz / range;
-      const vr = -(egoVel.x * losX + egoVel.z * losZ);
+      const vr = -(truckVel.x * losX + truckVel.z * losZ);
       // RCS by machine size
       const rcs = 10 * Math.log10(m.dims.w * m.dims.h * m.dims.l) + gauss() * 1.5;
       this.tracks.push({

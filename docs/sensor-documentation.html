@@ -114,7 +114,7 @@ sensors as independent nodes publishing on their own clocks.</p>
 <tr><th>Frame</th><th>Definition</th><th>Used by</th></tr>
 <tr><td><b>World</b></td><td>three.js Y-up; ground is the XZ plane; north = −Z, east = +X</td><td>scene, GPS ENU conversion, LiDAR world points</td></tr>
 <tr><td><b>Truck body</b></td><td>+Z forward, +Y up, +X left; yaw about Y with forward = (sin ψ, 0, cos ψ)</td><td>sensor mounts, IMU axes, radar boresight</td></tr>
-<tr><td><b>Ego (BEV)</b></td><td>truck frame collapsed to 2D: x = right/left, y = forward</td><td>LiDAR bird's-eye panel</td></tr>
+<tr><td><b>Truck (BEV)</b></td><td>truck frame collapsed to 2D: x = right/left, y = forward</td><td>LiDAR bird's-eye panel</td></tr>
 <tr><td><b>Image</b></td><td>NDC from projection matrix → [0..1] with y flipped</td><td>camera detections overlay</td></tr>
 <tr><td><b>Geodetic</b></td><td>WGS-84 lat/lon around site origin −23.3582°, 119.7521°</td><td>GNSS fix</td></tr>
 </table>
@@ -378,7 +378,7 @@ assume a clean sensor. <code>nearestAhead()</code> feeds the truck's AEB: any no
 <tr><td>Pitch ±30°, Yaw ±180°</td><td>rig sliders</td><td>boresight; yaw 180° = rear cross-traffic radar (disables forward AEB!)</td></tr>
 <tr><td>Range 40–250 m, FOV 20–160°</td><td>rig sliders</td><td>gate; PPI wedge + 3D wedge gizmo rebuild to match</td></tr>
 <tr><td>Machine list</td><td>world.machines</td><td>target set</td></tr>
-<tr><td>Ego velocity</td><td>truck.js</td><td>radial-velocity term</td></tr>
+<tr><td>Truck velocity</td><td>truck.js</td><td>radial-velocity term</td></tr>
 </table>
 
 <h3>4.5 Where to see the output</h3>
@@ -423,7 +423,7 @@ then corrupted with bias, white noise, and speed-dependent vibration.</p>
 <div class="diagram">
 <h4>IMU PIPELINE</h4>
 <div class="flow">
-  <div class="fbox fc-imu"><b>Vehicle kinematics</b><small>v, dv/dt, yaw rate ω<br>from EgoTruck integrator</small></div>
+  <div class="fbox fc-imu"><b>Vehicle kinematics</b><small>v, dv/dt, yaw rate ω<br>from Truck integrator</small></div>
   <div class="farrow">→</div>
   <div class="fbox fc-imu"><b>Rigid-body model</b><small>a_long = dv/dt<br>a_lat = v·ω (centripetal)<br>a_up = g</small></div>
   <div class="farrow">→</div>
@@ -449,7 +449,7 @@ strip-chart panel renders directly.</p>
 <h3>5.4 Inputs</h3>
 <table>
 <tr><th>Input</th><th>Source</th><th>Effect</th></tr>
-<tr><td>speed, accelLong, yawRate</td><td>EgoTruck integrator</td><td>the true signals being measured</td></tr>
+<tr><td>speed, accelLong, yawRate</td><td>Truck integrator</td><td>the true signals being measured</td></tr>
 <tr><td>Bias draw</td><td>constructor RNG</td><td>constant offset per run (visible as non-zero flat lines at rest)</td></tr>
 <tr><td>Vibration gain</td><td>truck speed</td><td>trace "thickness" grows as the truck speeds up</td></tr>
 </table>

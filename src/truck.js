@@ -1,19 +1,19 @@
 // AUSSIM (AUtonomy Site SIMulator) © 2026 Lokanath.
-// Ego vehicle: CAT 797F autonomous haul truck.
+// Vehicle: AHT-797 autonomous haul truck.
 // Kinematic model + pure-pursuit path tracker + simple mission state machine.
 import * as THREE from 'three';
 import { makeHaulTruck, makeLabel } from './world.js';
 
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 
-export class EgoTruck {
+export class Truck {
   constructor(scene, path, terrainH = () => 0) {
     this.terrainH = terrainH;
 
     this.group = makeHaulTruck();
     this.group.rotation.order = 'YXZ';  // yaw → pitch → roll for terrain following
     this.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
-    const lbl = makeLabel('AT-797 · EGO', '#5ad0ff');
+    const lbl = makeLabel('AHT-797 · TRUCK', '#5ad0ff');
     lbl.position.y = 11;
     this.group.add(lbl);
     scene.add(this.group);
@@ -33,6 +33,11 @@ export class EgoTruck {
     this.obstacleDist = Infinity; // fed by radar (AEB)
     this.loadTime = 9;         // s to fill payload at A
     this.dumpTime = 6;         // s for full dump sequence at B
+    // The shovel's dig+swing takes up most of `load` 0..1; it only actually tips its
+    // bucket into the truck bed across this narrow window (matches the shovel's own
+    // dump-phase timing in main.js). The truck bed shouldn't visibly fill before then.
+    this.scoopDumpStart = 0.72;
+    this.scoopDumpEnd = 0.82;
 
     this.bed = this.group.userData.bed;
     this.bedPivot = this.group.userData.bedPivot;   // rear hinge — rotate negative to raise the front
@@ -62,10 +67,21 @@ export class EgoTruck {
     this.applyPayloadVisual();
   }
 
+  // Fraction of the truck bed that should visibly show material right now.
+  // While LOADING, this stays at 0 through the shovel's dig/lift/swing and only
+  // ramps up once the bucket actually tips its scoop into the bed; elsewhere it
+  // tracks the real payload fraction (e.g. draining while DUMPING at B).
+  get displayLoad() {
+    if (this.state !== 'LOADING') return this.load;
+    return THREE.MathUtils.clamp(
+      (this.load - this.scoopDumpStart) / (this.scoopDumpEnd - this.scoopDumpStart), 0, 1);
+  }
+
   applyPayloadVisual() {
     if (!this.payload) return;
-    this.payload.visible = this.load > 0.03;
-    this.payload.scale.y = Math.max(0.05, this.load);
+    const fill = this.displayLoad;
+    this.payload.visible = fill > 0.03;
+    this.payload.scale.y = Math.max(0.05, fill);
     // while tipping, the heap slides toward the open rear of the body
     const slide = this.state === 'DUMPING' ? (1 - this.load) * 3.4 : 0;
     this.payload.position.z = this.payloadRestZ - slide;

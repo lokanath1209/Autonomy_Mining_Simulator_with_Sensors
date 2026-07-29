@@ -65,7 +65,7 @@ export function drawLidarBEV(canvas, lidar) {
     g.fillText(`${r}`, cx + 2 * dpr, cy - r * scale - 2 * dpr);
   }
 
-  // points (ego frame: meta = [right, forward, height, intensity])
+  // points (truck frame: meta = [right, forward, height, intensity])
   for (let i = 0; i < lidar.maxPoints; i++) {
     if (!lidar.valid[i]) continue;
     const rx = lidar.meta[i * 4], fz = lidar.meta[i * 4 + 1], py = lidar.meta[i * 4 + 2], inten = lidar.meta[i * 4 + 3];
@@ -78,7 +78,7 @@ export function drawLidarBEV(canvas, lidar) {
     g.fillRect(cx + rx * scale, cy - fz * scale, 1.6 * dpr, 1.6 * dpr);
   }
 
-  // ego
+  // truck
   g.fillStyle = '#5ad0ff';
   g.beginPath();
   g.moveTo(cx, cy - 7 * dpr); g.lineTo(cx - 4.5 * dpr, cy + 5 * dpr); g.lineTo(cx + 4.5 * dpr, cy + 5 * dpr);
@@ -219,7 +219,7 @@ export function drawGPS(canvas, gps, truck, path) {
   g.fillStyle = 'rgba(90,208,255,0.7)';
   for (const p of gps.track) g.fillRect(px(p) - dpr * 0.7, pz(p) - dpr * 0.7, 1.4 * dpr, 1.4 * dpr);
 
-  // ego arrow
+  // truck arrow
   const ex = px(truck.pos), ez = pz(truck.pos);
   g.save();
   g.translate(ex, ez);
