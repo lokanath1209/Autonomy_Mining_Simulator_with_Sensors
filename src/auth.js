@@ -8,9 +8,8 @@ export function initAuth() {
   const overlay = document.getElementById('auth-overlay');
   if (!overlay) return;
 
-  // No key = dev mode bypass
   if (!KEY) {
-    overlay.remove();
+    _showConfigError(overlay);
     return;
   }
 
@@ -20,32 +19,32 @@ export function initAuth() {
     appearance: {
       layout: { socialButtonsVariant: 'blockButton', socialButtonsPlacement: 'top' },
       variables: {
-        colorBackground:         '#0d1117',
-        colorText:               '#d7dee8',
-        colorTextSecondary:      '#7c8a9c',
-        colorPrimary:            '#ffcc00',
-        colorInputBackground:    '#12161c',
-        colorInputText:          '#d7dee8',
-        colorNeutral:            '#232b36',
-        borderRadius:            '6px',
-        fontFamily:              '"Segoe UI", system-ui, sans-serif',
-        fontSize:                '14px',
+        colorBackground:      '#0d1117',
+        colorText:            '#d7dee8',
+        colorTextSecondary:   '#7c8a9c',
+        colorPrimary:         '#ffcc00',
+        colorInputBackground: '#12161c',
+        colorInputText:       '#d7dee8',
+        colorNeutral:         '#232b36',
+        borderRadius:         '6px',
+        fontFamily:           '"Segoe UI", system-ui, sans-serif',
+        fontSize:             '14px',
       },
       elements: {
         card: {
-          background:  'rgba(18,22,28,0.96)',
-          border:      '1px solid rgba(255,204,0,0.18)',
-          boxShadow:   '0 12px 48px rgba(0,0,0,0.7)',
+          background:   'rgba(18,22,28,0.96)',
+          border:       '1px solid rgba(255,204,0,0.18)',
+          boxShadow:    '0 12px 48px rgba(0,0,0,0.7)',
           borderRadius: '10px',
         },
-        headerTitle:          { color: '#fff', fontWeight: '700' },
-        headerSubtitle:       { color: '#7c8a9c' },
-        formButtonPrimary:    { background: 'linear-gradient(180deg,#ffd83d,#f0b400)', color: '#14100a', fontWeight: '700' },
-        socialButtonsBlockButton:     { borderColor: 'rgba(255,204,0,0.25)', color: '#d7dee8' },
-        socialButtonsBlockButtonText: { color: '#d7dee8' },
-        formFieldInput:       { background: '#12161c', borderColor: '#232b36', color: '#d7dee8' },
-        footerActionLink:     { color: '#ffcc00' },
-        identityPreviewText:  { color: '#d7dee8' },
+        headerTitle:                   { color: '#fff', fontWeight: '700' },
+        headerSubtitle:                { color: '#7c8a9c' },
+        formButtonPrimary:             { background: 'linear-gradient(180deg,#ffd83d,#f0b400)', color: '#14100a', fontWeight: '700' },
+        socialButtonsBlockButton:      { borderColor: 'rgba(255,204,0,0.25)', color: '#d7dee8' },
+        socialButtonsBlockButtonText:  { color: '#d7dee8' },
+        formFieldInput:                { background: '#12161c', borderColor: '#232b36', color: '#d7dee8' },
+        footerActionLink:              { color: '#ffcc00' },
+        identityPreviewText:           { color: '#d7dee8' },
         identityPreviewEditButtonIcon: { color: '#ffcc00' },
       },
     },
@@ -63,15 +62,34 @@ export function initAuth() {
     });
   }).catch(err => {
     console.error('[AUSSIM] Clerk init error:', err);
-    overlay.remove();
+    _showConfigError(overlay, err.message);
   });
 }
 
 function _clearOverlay(overlay, user) {
-  overlay.remove();
+  overlay.classList.add('auth-fade-out');
+  setTimeout(() => overlay.remove(), 400);
   const badge = document.getElementById('auth-user-badge');
   if (badge) {
     badge.textContent = user.primaryEmailAddress?.emailAddress ?? user.id;
     badge.style.display = 'block';
+  }
+}
+
+function _showConfigError(overlay, detail) {
+  const mount = document.getElementById('clerk-mount');
+  if (mount) {
+    mount.innerHTML = `
+      <div style="
+        background:rgba(255,93,93,0.1);border:1px solid #ff5d5d;
+        border-radius:8px;padding:18px 20px;text-align:center;color:#ff5d5d;
+        font-size:13px;line-height:1.6;
+      ">
+        <div style="font-size:1.4rem;margin-bottom:8px;">⚠️</div>
+        <strong>Authentication not configured</strong><br>
+        <span style="color:#7c8a9c;font-size:12px;">
+          ${detail ?? 'VITE_CLERK_PUBLISHABLE_KEY is missing.<br>Add it as a GitHub Actions secret and redeploy.'}
+        </span>
+      </div>`;
   }
 }

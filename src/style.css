@@ -46,6 +46,12 @@ body { font-family: "Segoe UI", system-ui, sans-serif; color: var(--txt); }
 #auth-foot {
   font-size: 0.68rem; color: #3a4455; margin-top: 10px;
 }
+.auth-fade-out {
+  animation: authFade 0.4s ease forwards;
+}
+@keyframes authFade {
+  to { opacity: 0; pointer-events: none; }
+}
 
 /* Signed-in user badge (top-right after auth) */
 #auth-user-badge {
