@@ -1,6 +1,6 @@
 // AUSSIM (AUtonomy Site SIMulator) © 2026 Lokanath.
 // Clerk authentication — email/password + Google OAuth.
-import Clerk from '@clerk/clerk-js';
+import { Clerk } from '@clerk/clerk-js';
 
 const KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
