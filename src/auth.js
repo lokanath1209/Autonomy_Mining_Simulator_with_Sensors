@@ -1,69 +1,104 @@
 // AUSSIM (AUtonomy Site SIMulator) © 2026 Lokanath.
-// Clerk authentication — email/password + Google OAuth.
-import { Clerk } from '@clerk/clerk-js';
+// Clerk auth — loaded via script tag (UMD bundle) to avoid Vite ESM/IIFE conflict.
 
 const KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-export function initAuth() {
+// Derive Clerk's CDN URL from the publishable key.
+// Key format: pk_[test|live]_[base64url(frontendApi + "$")]
+function _clerkUrl(key) {
+  try {
+    const b64 = key.split('_')[2].replace(/-/g, '+').replace(/_/g, '/');
+    const api = atob(b64).replace(/\$$/, '');
+    return `https://${api}/npm/@clerk/clerk-js@latest/dist/clerk.browser.js`;
+  } catch {
+    return null;
+  }
+}
+
+function _loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.crossOrigin = 'anonymous';
+    s.onload  = resolve;
+    s.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(s);
+  });
+}
+
+const CLERK_APPEARANCE = {
+  layout: { socialButtonsVariant: 'blockButton', socialButtonsPlacement: 'top' },
+  variables: {
+    colorBackground:      '#0d1117',
+    colorText:            '#d7dee8',
+    colorTextSecondary:   '#7c8a9c',
+    colorPrimary:         '#ffcc00',
+    colorInputBackground: '#12161c',
+    colorInputText:       '#d7dee8',
+    colorNeutral:         '#232b36',
+    borderRadius:         '6px',
+    fontFamily:           '"Segoe UI", system-ui, sans-serif',
+    fontSize:             '14px',
+  },
+  elements: {
+    card: {
+      background:   'rgba(18,22,28,0.96)',
+      border:       '1px solid rgba(255,204,0,0.18)',
+      boxShadow:    '0 12px 48px rgba(0,0,0,0.7)',
+      borderRadius: '10px',
+    },
+    headerTitle:                   { color: '#fff', fontWeight: '700' },
+    headerSubtitle:                { color: '#7c8a9c' },
+    formButtonPrimary:             { background: 'linear-gradient(180deg,#ffd83d,#f0b400)', color: '#14100a', fontWeight: '700' },
+    socialButtonsBlockButton:      { borderColor: 'rgba(255,204,0,0.25)', color: '#d7dee8' },
+    socialButtonsBlockButtonText:  { color: '#d7dee8' },
+    formFieldInput:                { background: '#12161c', borderColor: '#232b36', color: '#d7dee8' },
+    footerActionLink:              { color: '#ffcc00' },
+    identityPreviewText:           { color: '#d7dee8' },
+    identityPreviewEditButtonIcon: { color: '#ffcc00' },
+  },
+};
+
+export async function initAuth() {
   const overlay = document.getElementById('auth-overlay');
   if (!overlay) return;
 
   if (!KEY) {
-    _showConfigError(overlay);
+    _showConfigError(overlay, 'VITE_CLERK_PUBLISHABLE_KEY is missing.<br>Add it as a GitHub Actions secret and redeploy.');
     return;
   }
 
-  const clerk = new Clerk(KEY);
+  const scriptUrl = _clerkUrl(KEY);
+  if (!scriptUrl) {
+    _showConfigError(overlay, 'Could not parse Clerk publishable key.');
+    return;
+  }
 
-  clerk.load({
-    appearance: {
-      layout: { socialButtonsVariant: 'blockButton', socialButtonsPlacement: 'top' },
-      variables: {
-        colorBackground:      '#0d1117',
-        colorText:            '#d7dee8',
-        colorTextSecondary:   '#7c8a9c',
-        colorPrimary:         '#ffcc00',
-        colorInputBackground: '#12161c',
-        colorInputText:       '#d7dee8',
-        colorNeutral:         '#232b36',
-        borderRadius:         '6px',
-        fontFamily:           '"Segoe UI", system-ui, sans-serif',
-        fontSize:             '14px',
-      },
-      elements: {
-        card: {
-          background:   'rgba(18,22,28,0.96)',
-          border:       '1px solid rgba(255,204,0,0.18)',
-          boxShadow:    '0 12px 48px rgba(0,0,0,0.7)',
-          borderRadius: '10px',
-        },
-        headerTitle:                   { color: '#fff', fontWeight: '700' },
-        headerSubtitle:                { color: '#7c8a9c' },
-        formButtonPrimary:             { background: 'linear-gradient(180deg,#ffd83d,#f0b400)', color: '#14100a', fontWeight: '700' },
-        socialButtonsBlockButton:      { borderColor: 'rgba(255,204,0,0.25)', color: '#d7dee8' },
-        socialButtonsBlockButtonText:  { color: '#d7dee8' },
-        formFieldInput:                { background: '#12161c', borderColor: '#232b36', color: '#d7dee8' },
-        footerActionLink:              { color: '#ffcc00' },
-        identityPreviewText:           { color: '#d7dee8' },
-        identityPreviewEditButtonIcon: { color: '#ffcc00' },
-      },
-    },
-  }).then(() => {
+  try {
+    await _loadScript(scriptUrl);
+
+    const clerk = new window.Clerk(KEY);
+    await clerk.load({ appearance: CLERK_APPEARANCE });
+
     if (clerk.user) {
       _clearOverlay(overlay, clerk.user);
       return;
     }
+
     clerk.mountSignIn(document.getElementById('clerk-mount'), {
-      afterSignInUrl: window.location.href,
-      afterSignUpUrl: window.location.href,
+      appearance:      CLERK_APPEARANCE,
+      afterSignInUrl:  window.location.href,
+      afterSignUpUrl:  window.location.href,
     });
+
     clerk.addListener(({ user }) => {
       if (user) _clearOverlay(overlay, user);
     });
-  }).catch(err => {
-    console.error('[AUSSIM] Clerk init error:', err);
+
+  } catch (err) {
+    console.error('[AUSSIM] Clerk error:', err);
     _showConfigError(overlay, err.message);
-  });
+  }
 }
 
 function _clearOverlay(overlay, user) {
@@ -87,9 +122,7 @@ function _showConfigError(overlay, detail) {
       ">
         <div style="font-size:1.4rem;margin-bottom:8px;">⚠️</div>
         <strong>Authentication not configured</strong><br>
-        <span style="color:#7c8a9c;font-size:12px;">
-          ${detail ?? 'VITE_CLERK_PUBLISHABLE_KEY is missing.<br>Add it as a GitHub Actions secret and redeploy.'}
-        </span>
+        <span style="color:#7c8a9c;font-size:12px;">${detail}</span>
       </div>`;
   }
 }
